@@ -5,24 +5,23 @@ import requests
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="AI Match Predictor", layout="wide")
-st.title("🧠 Yapay Zeka Destekli Stratejik Analiz")
+st.set_page_config(page_title="AI Match Sim", layout="wide")
+st.title("⚽ AI Stratejik Maç Karşılaştırma Motoru")
 
-# Lig Seçimi
+# Ligler
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
-sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
+sec_lig = st.sidebar.selectbox("Analiz Edilecek Ligi Seçin", list(ligler.keys()))
 
 @st.cache_data
-def lig_verisi_cek(kod):
+def veri_cek(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
     try:
-        response = requests.get(url, headers=HEADERS)
-        data = response.json()
-        return data['standings'][0]['table']
+        res = requests.get(url, headers=HEADERS).json()
+        return res['standings'][0]['table']
     except:
         return None
 
-tablo = lig_verisi_cek(ligler[sec_lig])
+tablo = veri_cek(ligler[sec_lig])
 
 if tablo:
     veriler = {row['team']['name']: row for row in tablo}
@@ -32,12 +31,25 @@ if tablo:
     with c1: ev_adi = st.selectbox("Ev Sahibi Takım", takimlar)
     with c2: dep_adi = st.selectbox("Deplasman Takımı", takimlar)
 
-    if st.button("🧠 AI SİMÜLASYONUNU BAŞLAT"):
-        e, d = veriler[ev_adi], veriler[dep_adi]
+    # ANALİZ TETİKLEYİCİ BUTON
+    if st.button("🧠 AI ANALİZİ VE SİMÜLASYONU BAŞLAT"):
+        e = veriler[ev_adi]
+        d = veriler[dep_adi]
         
-        # --- VERİ MADENCİLİĞİ ---
+        # 1. VERİ İŞLEME (AI Girdileri)
         e_m, d_m = e['playedGames'], d['playedGames']
-        e_hucum = e['goalsFor'] / e_m
-        e_defans = e['goalsAgainst'] / e_m
-        d_hucum = d['goalsFor'] / d_m
-        d_defans = d['goalsAgainst'] / d_m
+        
+        if e_m > 0 and d_m > 0:
+            e_h = e['goalsFor'] / e_m
+            e_d = e['goalsAgainst'] / e_m
+            d_h = d['goalsFor'] / d_m
+            d_d = d['goalsAgainst'] / d_m
+
+            # 2. AI SİMÜLASYON MOTORU (Olasılık Hesaplama)
+            # Ev sahibinin gücü rakip defans zayıflığıyla çarpıştırılır
+            ev_beklenen = (e_h * d_d) ** 0.5 + 0.3
+            dep_beklenen = (d_h * e_d) ** 0.5
+            
+            # Galibiyet Olasılığı
+            toplam_guc = ev_beklenen + dep_beklenen
+            ev_olasil
