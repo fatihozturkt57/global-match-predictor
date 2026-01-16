@@ -50,22 +50,6 @@ try:
 
         with a1:
             st.info(f"🏠 {ev} Analizi")
-            st.write(f"Puan Ortalaması: {e_puan}")
-            if e_puan > 1.8: st.write("✅ **Avantaj:** Şampiyonluk formunda.")
-            if e['goalsFor'] > e['goalsAgainst']: st.write("✅ **Avantaj:** Hücum hattı çok verimli.")
-            if e['goalsAgainst'] > 30: st.write("❌ **Dezavantaj:** Savunma hattı çok geçirgen.")
-
-        with a2:
-            st.info(f"🚀 {dep} Analizi")
-            st.write(f"Puan Ortalaması: {d_puan}")
-            if d_puan > e_puan: st.write("✅ **Avantaj:** Form grafiği daha yüksek.")
-            if d['goalsAgainst'] < d['playedGames']: st.write("✅ **Avantaj:** Çok disiplinli savunma.")
-            if d['goalsFor'] < 25: st.write("❌ **Dezavantaj:** Bitiricilik sorunu yaşıyorlar.")
-
-        st.divider()
-        if e_skor > d_skor: st.success(f"🤖 SONUÇ: {ev} kazanmaya yakın.")
-        elif d_skor > e_skor: st.error(f"🤖 SONUÇ: {dep} favori görünüyor.")
-        else: st.warning("🤖 SONUÇ: Beraberlik ihtimali yüksek.")
-
-except Exception:
-    st.error("Bir veri hatası oluştu. Lütfen tekrar deneyin.")
+            st.write(f"**Puan Ortalaması:** {e_puan}")
+            if e_puan > 1.8:
+                st.write(f"✅ **GÜÇLÜ YAN:** {ev}, maç başına topladığı {e_puan
