@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import random
 
-# API Bilgileri
+# API Ayarları
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
@@ -51,6 +51,9 @@ try:
         with a1:
             st.info(f"🏠 {ev} Analizi")
             st.write(f"**Puan Ortalaması:** {e_puan}")
-            
             if e_puan > 1.8:
-                st.write("✅ **GÜÇLÜ YAN:** Takım ligin elit sevi
+                st.write("✅ **GÜÇLÜ YAN:** Takım ligin elit seviyesinde puan topluyor. Bu istikrar, zorlu anlarda oyun disiplinini kaybetmediklerini kanıtlıyor.")
+            if e['goalsFor'] > e['goalsAgainst']:
+                st.write("🔥 **HÜCUM ETKİSİ:** Attıkları gol yediklerinden fazla. Forvet hattı çok formda ve her an skoru değiştirebilecek kapasitede.")
+            if e['goalsAgainst'] > 30:
+                st
