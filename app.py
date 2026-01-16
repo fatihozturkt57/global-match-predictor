@@ -52,26 +52,7 @@ try:
             st.info(f"🏠 {ev} Analizi")
             st.write(f"**Puan Ortalaması:** {e_puan}")
             if e_puan > 1.8:
-                st.write("✅ **GÜÇLÜ YAN:** Takım ligin elit seviyesinde puan topluyor. Bu istikrar taktik disiplini gösterir.")
+                st.write("✅ **GÜÇLÜ YAN:** Takım elit seviyede puan topluyor. Bu istikrar taktik disiplini gösterir.")
             if e['goalsFor'] > e['goalsAgainst']:
-                st.write("🔥 **HÜCUM ETKİSİ:** Gol sayıları yediklerinden fazla. Forvet hattı her an skoru değiştirebilir.")
-            if e['goalsAgainst'] > 30:
-                st.write("⚠️ **SAVUNMA ZAAFİYETİ:** Yenen gol sayısı defansta ciddi boşluklar olduğunu gösteriyor.")
-
-        with a2:
-            st.info(f"🚀 {dep} Analizi")
-            st.write(f"**Puan Ortalaması:** {d_puan}")
-            if d_puan > e_puan:
-                st.write("💪 **FORM DURUMU:** Deplasmanda olmasına rağmen rakipten daha istikrarlı bir grafiğe sahip.")
-            if d['goalsAgainst'] < d['playedGames']:
-                st.write("🛡️ **DEFANS DUVARI:** Maç başına 1 golden az yeme istatistiği ile çok katı bir savunmaları var.")
-            if d['lost'] > d['won']:
-                st.write("📉 **PSİKOLOJİK RİSK:** Mağlubiyet sayısı galibiyetten fazla; geriye düştüklerinde dağılıyorlar.")
-
-        st.divider()
-        if e_skor > d_skor: 
-            st.success(f"🤖 SONUÇ: {ev} kazanmaya yakın. Ev sahibi avantajı ve hücum gücü ağır basıyor.")
-        elif d_skor > e_skor: 
-            st.error(f"🤖 SONUÇ: {dep} favori görünüyor. Misafir ekibin savunma disiplini belirleyici olacaktır.")
-        else: 
-            st.warning("🤖 SONUÇ: Beraberlik
+                st.write("
+                         
