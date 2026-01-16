@@ -37,29 +37,32 @@ st.sidebar.subheader("👤 Kullanıcı Paneli")
 if not st.session_state.logged_in:
     tab1, tab2 = st.sidebar.tabs(["🔑 Giriş", "📝 Kayıt"])
 
+    # ---- GİRİŞ ----
     with tab1:
-        u = st.text_input("Kullanıcı Adı")
-        p = st.text_input("Şifre", type="password")
-        if st.button("Giriş Yap"):
+        u = st.text_input("Kullanıcı Adı", key="login_user")
+        p = st.text_input("Şifre", type="password", key="login_pass")
+
+        if st.button("Giriş Yap", key="login_btn"):
             if u in st.session_state.users and st.session_state.users[u]["password"] == p:
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
                 st.success("Giriş başarılı")
                 st.rerun()
             else:
-                st.error("Hatalı bilgiler")
+                st.error("Hatalı kullanıcı adı veya şifre")
 
+    # ---- KAYIT ----
     with tab2:
-        ru = st.text_input("Yeni Kullanıcı Adı")
-        rm = st.text_input("E-posta")
-        rp = st.text_input("Telefon")
-        rpass = st.text_input("Şifre", type="password")
+        ru = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
+        rm = st.text_input("E-posta", key="reg_mail")
+        rp = st.text_input("Telefon", key="reg_phone")
+        rpass = st.text_input("Şifre", type="password", key="reg_pass")
 
-        if st.button("Kayıt Ol"):
+        if st.button("Kayıt Ol", key="reg_btn"):
             if ru in st.session_state.users:
-                st.error("Bu kullanıcı adı alınmış")
+                st.error("Bu kullanıcı adı zaten alınmış")
             elif not ru or not rpass:
-                st.error("Zorunlu alanlar boş")
+                st.error("Kullanıcı adı ve şifre zorunlu")
             else:
                 st.session_state.users[ru] = {
                     "password": rpass,
@@ -67,23 +70,23 @@ if not st.session_state.logged_in:
                     "phone": rp,
                     "pro": False
                 }
-                st.success("Kayıt başarılı, giriş yapabilirsin")
+                st.success("Kayıt başarılı, giriş yapabilirsiniz")
 
 else:
     user = st.session_state.current_user
     udata = st.session_state.users[user]
 
-    st.sidebar.success(f"Hoş geldin: {user}")
+    st.sidebar.success(f"👋 Hoş geldin: {user}")
 
     if udata["pro"]:
-        st.sidebar.success("🔥 PRO AKTİF")
+        st.sidebar.success("🔥 PRO ÜYELİK AKTİF")
     else:
         st.sidebar.warning("🆓 FREE ÜYELİK")
-        if st.sidebar.button("🔥 Pro’ya Geç (Demo)"):
+        if st.sidebar.button("🔥 Pro’ya Geç (Demo)", key="upgrade_btn"):
             st.session_state.users[user]["pro"] = True
             st.rerun()
 
-    if st.sidebar.button("Çıkış Yap"):
+    if st.sidebar.button("Çıkış Yap", key="logout_btn"):
         st.session_state.logged_in = False
         st.session_state.current_user = None
         st.rerun()
@@ -113,7 +116,7 @@ ligler = {
     "Fransa": "FL1"
 }
 
-sec_lig = st.sidebar.selectbox("Lig Seçin", list(ligler.keys()))
+sec_lig = st.sidebar.selectbox("Lig Seçin", list(ligler.keys()), key="lig_sec")
 tablo = lig_verisi_al(ligler[sec_lig])
 
 takimlar_db = {row["team"]["name"]: row for row in tablo}
@@ -121,14 +124,14 @@ isimler = sorted(takimlar_db.keys())
 
 c1, c2 = st.columns(2)
 with c1:
-    ev_adi = st.selectbox("Ev Sahibi", isimler)
+    ev_adi = st.selectbox("Ev Sahibi", isimler, key="ev")
 with c2:
-    dep_adi = st.selectbox("Deplasman", isimler)
+    dep_adi = st.selectbox("Deplasman", isimler, key="dep")
 
 # =========================
 # ANALİZ
 # =========================
-if st.button("AI ANALİZİ BAŞLAT"):
+if st.button("AI ANALİZİ BAŞLAT", key="analyze_btn"):
     e = takimlar_db[ev_adi]
     d = takimlar_db[dep_adi]
 
@@ -159,7 +162,7 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("Dep Galibiyet %", dep_oran)
 
     # =========================
-    # PAS GEÇ (PRO ONLY)
+    # PAS GEÇ (SADECE PRO)
     # =========================
     if udata["pro"]:
         if abs(ev_xg - dep_xg) < 0.15:
