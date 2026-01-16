@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import random
 
-# API Ayarları
+# API Bilgileri
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
@@ -17,6 +17,7 @@ def veri_cek(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
     return requests.get(url, headers=HEADERS).json()['standings'][0]['table']
 
+# --- ANA KOD BLOĞU BAŞLANGICI ---
 try:
     tablo = veri_cek(ligler[sec_lig])
     veriler = {row['team']['name']: row for row in tablo}
@@ -56,4 +57,8 @@ try:
             if e['goalsFor'] > e['goalsAgainst']:
                 st.write("🔥 **HÜCUM ETKİSİ:** Attıkları gol yediklerinden fazla. Forvet hattı çok formda ve her an skoru değiştirebilecek kapasitede.")
             if e['goalsAgainst'] > 30:
-                st
+                st.write("⚠️ **SAVUNMA ZAAFİYETİ:** Yenen toplam gol sayısı defans kurgusunda ciddi gedikler olduğunu gösteriyor, kontra ataklarda çok riskliler.")
+
+        with a2:
+            st.info(f"🚀 {dep} Analizi")
+            st.
