@@ -1,21 +1,7 @@
 import streamlit as st
 import requests
-import random
 import sqlite3
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-
-# =========================
-# SENDGRID AYARLARI
-# =========================
-SENDGRID_API_KEY = st.secrets["SENDGRID_API_KEY"]
-SENDGRID_FROM_EMAIL = st.secrets["SENDGRID_FROM_EMAIL"]
-
-# =========================
-# FOOTBALL API
-# =========================
-API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
-HEADERS = {"X-Auth-Token": API_KEY}
+import random
 
 # =========================
 # DATABASE
@@ -26,41 +12,13 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password TEXT,
-    email TEXT,
-    phone TEXT,
-    pro INTEGER DEFAULT 0,
-    verified INTEGER DEFAULT 0
+    pro INTEGER DEFAULT 0
 )
 """)
 conn.commit()
 
 # =========================
-# SENDGRID E-POSTA FONKSİYONU
-# =========================
-def send_email(to, code):
-    try:
-        message = Mail(
-            from_email=SENDGRID_FROM_EMAIL,
-            to_emails=to,
-            subject="AI Platform Doğrulama Kodu",
-            html_content=f"""
-            <h2>AI Platform</h2>
-            <p>Doğrulama Kodunuz:</p>
-            <h1>{code}</h1>
-            <p>Bu kodu kimseyle paylaşmayın.</p>
-            """
-        )
-
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        sg.send(message)
-        return True
-
-    except Exception:
-        st.error("E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.")
-        return False
-
-# =========================
-# KULLANICI FONKSİYONLARI
+# USER FUNCTIONS
 # =========================
 def get_user(username):
     c.execute("SELECT * FROM users WHERE username=?", (username,))
@@ -71,7 +29,7 @@ def make_pro(username):
     conn.commit()
 
 # =========================
-# STREAMLIT AYARLARI
+# STREAMLIT SETUP
 # =========================
 st.set_page_config(page_title="AI Pro Predictor", layout="wide")
 st.title("AI Futbol Analiz Platformu")
@@ -80,60 +38,41 @@ if "login" not in st.session_state:
     st.session_state.login = None
 
 # =========================
-# KULLANICI GİRİŞ / KAYIT
+# LOGIN / REGISTER SIDEBAR
 # =========================
 with st.sidebar:
     if not st.session_state.login:
         tab1, tab2 = st.tabs(["Giriş", "Kayıt"])
 
-        # ---- GİRİŞ ----
+        # ---- LOGIN ----
         with tab1:
             u = st.text_input("Kullanıcı Adı", key="login_user")
             p = st.text_input("Şifre", type="password", key="login_pass")
             if st.button("Giriş Yap"):
                 user = get_user(u)
-                if user and user[1] == p and user[5] == 1:
+                if user and user[1] == p:
                     st.session_state.login = u
                     st.rerun()
                 else:
-                    st.error("Giriş başarısız veya hesap doğrulanmamış")
+                    st.error("Giriş başarısız veya kullanıcı yok")
 
-        # ---- KAYIT ----
+        # ---- REGISTER ----
         with tab2:
             ru = st.text_input("Kullanıcı Adı", key="reg_user")
-            rm = st.text_input("E-posta", key="reg_mail")
-            rp = st.text_input("Telefon", key="reg_phone")
             rpw = st.text_input("Şifre", type="password", key="reg_pass")
 
-            if st.button("E-posta Kodu Gönder"):
-                code = random.randint(100000, 999999)
-                st.session_state.email_code = code
-                if send_email(rm, code):
-                    st.success("Doğrulama kodu e-posta ile gönderildi")
-
-            rc = st.text_input("Doğrulama Kodu", key="reg_code")
-
             if st.button("Kayıt Ol"):
-                if "email_code" not in st.session_state:
-                    st.error("Önce kod gönderin")
-                elif str(rc) != str(st.session_state.email_code):
-                    st.error("Kod hatalı")
+                if get_user(ru):
+                    st.error("Bu kullanıcı adı zaten var")
                 else:
-                    try:
-                        c.execute(
-                            "INSERT INTO users VALUES (?,?,?,?,0,1)",
-                            (ru, rpw, rm, rp)
-                        )
-                        conn.commit()
-                        st.success("Kayıt başarılı, giriş yapabilirsiniz")
-                    except:
-                        st.error("Bu kullanıcı adı zaten var")
-
+                    c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (ru, rpw))
+                    conn.commit()
+                    st.success("Kayıt başarılı, giriş yapabilirsiniz")
     else:
         user = get_user(st.session_state.login)
         st.success(f"Hoş geldin {user[0]}")
 
-        if user[4]:
+        if user[2]:
             st.success("🔥 PRO ÜYELİK AKTİF")
         else:
             st.warning("FREE ÜYELİK")
@@ -141,7 +80,7 @@ with st.sidebar:
 
             if st.button("💳 Pro Satın Al (Demo)"):
                 make_pro(user[0])
-                st.success("Ödeme alındı → Pro aktif")
+                st.success("Pro aktif edildi (demo)")
                 st.rerun()
 
         if st.button("Çıkış Yap"):
@@ -149,13 +88,14 @@ with st.sidebar:
             st.rerun()
 
 # =========================
-# AI ANALİZ BÖLÜMÜ
+# AI ANALYSIS SECTION
 # =========================
 if not st.session_state.login:
     st.stop()
 
 st.header("AI Maç Analizi")
 
+# --- LIGLER ---
 ligler = {
     "İngiltere": "PL",
     "İspanya": "PD",
@@ -169,7 +109,7 @@ sec_lig = st.selectbox("Lig Seçin", list(ligler.keys()))
 @st.cache_data(show_spinner=False)
 def lig_verisi_al(code):
     url = f"https://api.football-data.org/v4/competitions/{code}/standings"
-    r = requests.get(url, headers=HEADERS, timeout=10)
+    r = requests.get(url, headers={"X-Auth-Token": "59aad6ae23824eeb9f427e2ed418512e"}, timeout=10)
     r.raise_for_status()
     return r.json()["standings"][0]["table"]
 
@@ -213,7 +153,7 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("Deplasman XG", round(dep_xg, 2))
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
 
-    # Ekstra AI göstergeler
+    # Ekstra AI göstergeler (demo)
     st.metric("AI Güven Skoru", "81%")
     st.metric("Risk / Denge Seviyesi", "Orta")
     st.metric("Kırılgan Alan Analizi", "Pas Geç Algılanmadı")
