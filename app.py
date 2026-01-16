@@ -2,8 +2,9 @@ import streamlit as st
 import requests
 import random
 
+# API Ayarları
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
-HEADERS = { 'X-Auth-Token': API_KEY }
+HEADERS = {'X-Auth-Token': API_KEY}
 
 st.set_page_config(page_title="Ultra Analiz Merkezi", layout="wide")
 st.title("⚽ Ultra-Detaylı Maç Analiz Sistemi")
@@ -28,37 +29,51 @@ try:
     if st.button("DERİNLEMESİNE ANALİZİ BAŞLAT"):
         e, d = veriler[ev], veriler[dep]
         
-        # --- İSTATİSTİKSEL HESAPLAMALAR ---
+        # İstatistikler
         e_puan_ort = e['points'] / e['playedGames']
         d_puan_ort = d['points'] / d['playedGames']
-        
-        # Gol Beklentisi (xG tahmini)
         ev_xg = (e['goalsFor'] / e['playedGames'] + d['goalsAgainst'] / d['playedGames']) / 2
         dep_xg = (d['goalsFor'] / d['playedGames'] + e['goalsAgainst'] / e['playedGames']) / 2
-        
         ev_skor = round(ev_xg + 0.3)
         dep_skor = round(dep_xg)
 
         st.divider()
 
-        # 🎯 TAHMİN ÖZETİ
-        st.subheader("🎯 Maç Sonu Tahmini & Beklenen Skor")
-        k1, k2, k3, k4 = st.columns(4)
-        with k1:
-            st.metric("Tahmini Skor", f"{ev_skor} - {dep_skor}")
-        with k2:
-            st.write(f"🚩 **Korner:** {random.randint(9, 13)}+")
-        with k3:
-            st.write(f"🟨 **Sarı Kart:** {random.randint(4, 7)}+")
-        with k4:
-            st.info(f"🏆 **Favori:** {'1' if ev_skor > dep_skor else ('2' if dep_skor > ev_skor else '0')}")
+        # 1. BÖLÜM: ÖZET
+        st.subheader("🎯 Tahmin Özeti")
+        k1, k2, k3 = st.columns(3)
+        with k1: st.metric("Beklenen Skor", f"{ev_skor} - {dep_skor}")
+        with k2: st.write(f"🚩 Korner: {random.randint(9, 13)}+")
+        with k3: st.write(f"🟨 Kart: {random.randint(4, 7)}+")
 
         st.divider()
 
-        # 🔬 DERİN ANALİZ RAPORU
-        st.subheader("🔬 Takım Bazlı Nedenler ve Risk Analizi")
+        # 2. BÖLÜM: DETAYLI ANALİZ
+        st.subheader("🔬 Takım Analizleri")
         col_a, col_b = st.columns(2)
 
         with col_a:
-            st.markdown(f"### 🏠 {ev} Analizi")
-            st.write(f"**Puan Ortalaması:**
+            st.info(f"🏠 {ev}")
+            st.write(f"**Puan Ortalaması:** {e_puan_ort:.2f}")
+            if e_puan_ort > 2.0: st.write("✅ **Avantaj:** Şampiyonluk formunda.")
+            if e['goalsFor'] > e['goalsAgainst']: st.write("✅ **Avantaj:** Hücum hattı savunmadan güçlü.")
+            if e['goalsAgainst'] / e['playedGames'] > 1.5: st.write("❌ **Risk:** Savunma çok kolay açık veriyor.")
+
+        with col_b:
+            st.info(f"🚀 {dep}")
+            st.write(f"**Puan Ortalaması:** {d_puan_ort:.2f}")
+            if d_puan_ort > e_puan_ort: st.write("✅ **Avantaj:** Form olarak rakipten daha iyi.")
+            if d['goalsAgainst'] < d['playedGames']: st.write("✅ **Avantaj:** Çok disiplinli savunma.")
+            if d['goalsFor'] / d['playedGames'] < 1.1: st.write("❌ **Risk:** Gol yollarında kısır kalıyorlar.")
+
+        # 3. BÖLÜM: KARAR
+        st.divider()
+        if ev_skor > dep_skor:
+            st.success(f"🤖 **SONUÇ:** {ev} kazanmaya yakın. Saha avantajı ve kadro kalitesi ön planda.")
+        elif dep_skor > ev_skor:
+            st.error(f"🤖 **SONUÇ:** {dep} favori. Deplasmanda olmalarına rağmen daha dirençli görünüyorlar.")
+        else:
+            st.warning("🤖 **SONUÇ:** Beraberlik ihtimali çok yüksek. İki takım da birbirini kilitler.")
+
+except Exception as err:
+    st.error("Veri alınırken hata oluştu
