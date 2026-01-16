@@ -71,17 +71,7 @@ if st.button("AI ANALİZİ BAŞLAT"):
         risk = "Düşük Risk – Net Taraf"
 
     # =========================
-    # MAÇ EĞİLİMİ (SKOR YOK)
-    # =========================
-    if abs(ev_oran - dep_oran) < 10 and toplam_xg >= 2.8:
-        mac_egilimi = "Dengeli ve tempolu maç"
-    elif ev_oran > dep_oran:
-        mac_egilimi = "Ev sahibi üstün, kontrollü oyun"
-    else:
-        mac_egilimi = "Deplasman sürprizi mümkün"
-
-    # =========================
-    # FORM (SON 5 MAÇ – YAKLAŞIK)
+    # FORM (YAKLAŞIK)
     # =========================
     def form_hesap(puan, mac):
         oran = puan / max(mac * 3, 1)
@@ -123,9 +113,6 @@ if st.button("AI ANALİZİ BAŞLAT"):
     with m3:
         st.metric("AI Güven", f"%{guven}")
         st.metric("Risk", risk)
-
-    st.subheader("📌 Maç Eğilimi")
-    st.write(f"**Maç Eğilimi:** {mac_egilimi}")
 
     if premium:
         st.subheader("🔥 Pro Analiz")
