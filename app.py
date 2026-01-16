@@ -53,70 +53,73 @@ if st.button("AI ANALİZİ BAŞLAT"):
     ev_oran = round((ev_xg / toplam_xg) * 100)
     dep_oran = 100 - ev_oran
 
+    # =========================
+    # 1️⃣ AI GÜVEN SKORU
+    # =========================
+    guven_skoru = min(100, round(abs(ev_oran - dep_oran) * 1.5))
+
+    # =========================
+    # 2️⃣ RİSK / DENGE SEVİYESİ
+    # =========================
+    if abs(ev_oran - dep_oran) < 10:
+        risk = "Yüksek Risk – Sürprize Açık"
+    elif abs(ev_oran - dep_oran) < 25:
+        risk = "Orta Risk – Dengeli Maç"
+    else:
+        risk = "Düşük Risk – Net Favori"
+
+    # =========================
+    # 3️⃣ KIRILGAN ALAN ANALİZİ
+    # =========================
+    def kirilgan_alan(h, s):
+        if s > h:
+            return "Savunma Kırılgan"
+        elif h > s:
+            return "Hücum Güçlü"
+        else:
+            return "Denge Zayıf"
+
+    ev_kirilgan = kirilgan_alan(e_h, e_s)
+    dep_kirilgan = kirilgan_alan(d_h, d_s)
+
+    # =========================
+    # AVANTAJ / DEZAVANTAJ (ZORUNLU)
+    # =========================
+    def avantaj_dezavantaj(h, s):
+        if h > s:
+            return "Hücum Etkinliği Avantaj", "Savunma Açıkları Dezavantaj"
+        else:
+            return "Savunma Direnci Avantaj", "Hücum Üretkenliği Dezavantaj"
+
+    ev_av, ev_dez = avantaj_dezavantaj(e_h, e_s)
+    dep_av, dep_dez = avantaj_dezavantaj(d_h, d_s)
+
+    # =========================
+    # GÖRSEL RAPOR
+    # =========================
     st.divider()
     st.header(f"{ev_adi} - {dep_adi} AI Raporu")
 
-    m1, m2 = st.columns(2)
+    m1, m2, m3 = st.columns(3)
     with m1:
         st.metric("Ev Sahibi XG", round(ev_xg, 2))
         st.metric("Ev Galibiyet %", f"%{ev_oran}")
     with m2:
         st.metric("Deplasman XG", round(dep_xg, 2))
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
+    with m3:
+        st.metric("AI Güven Skoru", f"%{guven_skoru}")
+        st.metric("Risk Seviyesi", risk)
 
-    st.divider()
-    st.subheader("Avantaj / Dezavantaj Analizi")
+    st.subheader("🔍 Taktiksel Analiz")
 
-    col1, col2 = st.columns(2)
+    a1, a2 = st.columns(2)
+    with a1:
+        st.markdown(f"**{ev_adi} Avantajı:** {ev_av}")
+        st.markdown(f"**{ev_adi} Dezavantajı:** {ev_dez}")
+        st.markdown(f"**Kırılgan Alan:** {ev_kirilgan}")
 
-    # ===== EV SAHİBİ =====
-    with col1:
-        st.markdown(f"### 🏠 {ev_adi}")
-
-        st.markdown("**Avantajlar**")
-        if e_h > d_s:
-            st.write("- Hücum gücü rakip savunmaya karşı etkili.")
-        if e_s < d_s:
-            st.write("- Savunması rakibe göre daha sağlam.")
-        if ev_xg > dep_xg:
-            st.write("- Gol beklentisi rakibinden yüksek.")
-        if ev_oran > dep_oran:
-            st.write("- İstatistiksel olarak daha avantajlı.")
-
-        st.markdown("**Dezavantajlar**")
-        if e_h < d_h:
-            st.write("- Rakibine göre hücum üretkenliği daha düşük.")
-        if e_s > d_s:
-            st.write("- Rakibine göre savunmada daha fazla gol yiyor.")
-        if ev_xg < dep_xg:
-            st.write("- Gol beklentisi rakibinin gerisinde.")
-        if ev_oran < dep_oran:
-            st.write("- Kazanma olasılığı rakibinden daha düşük.")
-        if abs(ev_xg - dep_xg) < 0.25:
-            st.write("- Güç farkı çok az, kontrol avantajı sınırlı.")
-
-    # ===== DEPLASMAN =====
-    with col2:
-        st.markdown(f"### ✈️ {dep_adi}")
-
-        st.markdown("**Avantajlar**")
-        if d_h > e_s:
-            st.write("- Hücum gücü ev sahibi savunmasına karşı etkili.")
-        if d_s < e_s:
-            st.write("- Savunması ev sahibine göre daha dengeli.")
-        if dep_xg > ev_xg:
-            st.write("- Gol beklentisi ev sahibinden yüksek.")
-        if dep_oran > ev_oran:
-            st.write("- Maçı dengeleyebilecek istatistiksel avantaj var.")
-
-        st.markdown("**Dezavantajlar**")
-        if d_h < e_h:
-            st.write("- Rakibine göre hücum üretkenliği daha düşük.")
-        if d_s > e_s:
-            st.write("- Rakibine göre savunmada daha fazla gol yiyor.")
-        if dep_xg < ev_xg:
-            st.write("- Gol beklentisi ev sahibinin gerisinde.")
-        if dep_oran < ev_oran:
-            st.write("- Kazanma ihtimali ev sahibine göre daha düşük.")
-        if abs(ev_xg - dep_xg) < 0.25:
-            st.write("- Güç farkı çok az, deplasman dezavantajı mevcut.")
+    with a2:
+        st.markdown(f"**{dep_adi} Avantajı:** {dep_av}")
+        st.markdown(f"**{dep_adi} Dezavantajı:** {dep_dez}")
+        st.markdown(f"**Kırılgan Alan:** {dep_kirilgan}")
