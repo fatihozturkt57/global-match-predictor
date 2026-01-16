@@ -81,21 +81,6 @@ if st.button("AI ANALİZİ BAŞLAT"):
         mac_egilimi = "Deplasman sürprizi mümkün"
 
     # =========================
-    # KG VAR / ÜST-ALT (DENGELİ)
-    # =========================
-    if ev_xg > 1.1 and dep_xg > 1.1 and abs(ev_oran - dep_oran) < 25:
-        kg_var = "KG Var"
-    else:
-        kg_var = "KG Yok"
-
-    if toplam_xg >= 3.0 and abs(ev_oran - dep_oran) < 20:
-        ust_alt = "Üst 2.5"
-    elif toplam_xg < 2.4:
-        ust_alt = "Alt 2.5"
-    else:
-        ust_alt = "Kararsız (Riskli)"
-
-    # =========================
     # FORM (SON 5 MAÇ – YAKLAŞIK)
     # =========================
     def form_hesap(puan, mac):
@@ -139,10 +124,8 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("AI Güven", f"%{guven}")
         st.metric("Risk", risk)
 
-    st.subheader("📌 Maç Eğilimi & Gol Analizi")
+    st.subheader("📌 Maç Eğilimi")
     st.write(f"**Maç Eğilimi:** {mac_egilimi}")
-    st.write(f"**KG:** {kg_var}")
-    st.write(f"**Üst / Alt:** {ust_alt}")
 
     if premium:
         st.subheader("🔥 Pro Analiz")
