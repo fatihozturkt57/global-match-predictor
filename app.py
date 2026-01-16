@@ -1,4 +1,4 @@
-  import streamlit as st
+import streamlit as st
 import requests
 
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
@@ -64,30 +64,29 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("Deplasman XG", round(dep_xg, 2))
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
 
-    # ====== AVANTAJ / DEZAVANTAJ EK BÖLÜMÜ ======
     st.divider()
-    st.subheader("📌 Avantaj / Dezavantaj Nedenleri")
+    st.subheader("Avantaj / Dezavantaj Nedenleri")
 
     av_col, dez_col = st.columns(2)
 
     with av_col:
-        st.markdown("### ✅ Avantaj Nedenleri")
+        st.markdown("### Avantaj Nedenleri")
         if ev_xg > dep_xg:
-            st.write(f"- {ev_adi}, rakibine göre daha yüksek gol beklentisine sahip.")
+            st.write(f"- {ev_adi}, daha yüksek gol beklentisine sahip.")
         if e_h > d_h:
-            st.write(f"- {ev_adi}, maç başına daha üretken hücum yapıyor.")
+            st.write(f"- {ev_adi}, hücumda daha üretken.")
         if e_s < d_s:
-            st.write(f"- {ev_adi}, savunmada rakibinden daha az gol yiyor.")
+            st.write(f"- {ev_adi}, savunmada daha sağlam.")
         if ev_oran >= 55:
-            st.write("- İstatistikler ev sahibinin galibiyet ihtimalini destekliyor.")
+            st.write("- İstatistiksel üstünlük ev sahibinde.")
 
     with dez_col:
-        st.markdown("### ⚠️ Dezavantaj Nedenleri")
+        st.markdown("### Dezavantaj Nedenleri")
         if dep_xg >= ev_xg:
-            st.write(f"- {dep_adi}, gol üretimi açısından denge kurabilecek seviyede.")
+            st.write(f"- {dep_adi}, dengeyi bozabilecek hücum gücüne sahip.")
         if e_s > d_s:
-            st.write(f"- {ev_adi}, savunmada rakibinden daha fazla açık veriyor.")
+            st.write(f"- {ev_adi}, savunmada rakibinden daha fazla gol yiyor.")
         if ev_oran < 55:
-            st.write("- Galibiyet olasılığı net değil, risk faktörü mevcut.")
+            st.write("- Galibiyet ihtimali net değil.")
         if abs(ev_xg - dep_xg) < 0.30:
-            st.write("- Takımlar arasındaki güç farkı düşük, sürpriz sonuç ihtimali var.")
+            st.write("- Güç farkı düşük, sürpriz ihtimali var.")
