@@ -5,8 +5,8 @@ import requests
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="Pro Analiz v7", layout="wide")
-st.title("⚽ Profesyonel Maç Çarpıştırma & Analiz")
+st.set_page_config(page_title="Pro Analiz", layout="wide")
+st.title("📊 Gerçek Veri Karşılaştırma Paneli")
 
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
@@ -14,18 +14,12 @@ sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 @st.cache_data
 def veri_getir(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
-    try:
-        res = requests.get(url, headers=HEADERS).json()
-        # API'den gelen verinin doğruluğunu kontrol et
-        if 'standings' in res:
-            return res['standings'][0]['table']
-        return None
-    except:
-        return None
+    res = requests.get(url, headers=HEADERS).json()
+    return res['standings'][0]['table']
 
-tablo = veri_getir(ligler[sec_lig])
-
-if tablo:
+# Veriyi çek ve doğrula
+try:
+    tablo = veri_getir(ligler[sec_lig])
     veriler = {row['team']['name']: row for row in tablo}
     takimlar = sorted(list(veriler.keys()))
 
@@ -33,17 +27,26 @@ if tablo:
     with c1: ev_adi = st.selectbox("Ev Sahibi Takım", takimlar)
     with c2: dep_adi = st.selectbox("Deplasman Takımı", takimlar)
 
-    if st.button("📊 GERÇEK VERİLERİ ANALİZ ET"):
-        e, d = veriler[ev_adi], veriler[dep_adi]
+    if st.button("🔍 ANALİZİ BAŞLAT"):
+        # Takım verilerini al
+        e = veriler[ev_adi]
+        d = veriler[dep_adi]
         
-        # --- DOĞRU HESAPLAMA MANTIĞI ---
-        # Sayıyı sözlüğe değil, sözlüğün içindeki 'playedGames' değerine bölüyoruz
-        e_mac, d_mac = e['playedGames'], d['playedGames']
+        # Maç sayıları
+        e_m, d_m = e['playedGames'], d['playedGames']
         
-        e_atilan_ort = e['goalsFor'] / e_mac
-        e_yenilen_ort = e['goalsAgainst'] / e_mac
-        d_atilan_ort = d['goalsFor'] / d_mac
-        d_yenilen_ort = d['goalsAgainst'] / d_mac
+        # --- ANALİZ MANTIĞI (Her takıma göre değişen sonuçlar) ---
+        # 1. Maç başı gol ortalamaları
+        e_at = e['goalsFor'] / e_m
+        e_ye = e['goalsAgainst'] / e_m
+        d_at = d['goalsFor'] / d_m
+        d_ye = d['goalsAgainst'] / d_m
 
-        # Karşılıklı Güç Analizi (xG Simülasyonu)
-        # Ev sahibi skoru = (Ev hücum gücü + Deplasman defans zaafı
+        # 2. Karşılıklı Skor Tahmini (xG Mantığı)
+        # Evin atacağı: (Kendi hücumu + Rakip defans zafiyeti) / 2
+        e_tahmin = (e_at + d_ye) / 2 + 0.2
+        d_tahmin = (d_at + e_ye) / 2
+
+        # --- EKRANA YAZDIRMA ---
+        st.divider()
+        st.subheader(f"🏟️ {
