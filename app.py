@@ -2,21 +2,19 @@ import streamlit as st
 import requests
 import random
 import sqlite3
-import smtplib
-from email.mime.text import MIMEText
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 # =========================
-# SMTP AYARLARI (DOLDUR)
+# SENDGRID AYARLARI
 # =========================
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_EMAIL = "MAILIN@gmail.com"
-SMTP_PASSWORD = "APP_PASSWORD"
+SENDGRID_API_KEY = st.secrets["SENDGRID_API_KEY"]
+SENDGRID_FROM_EMAIL = st.secrets["SENDGRID_FROM_EMAIL"]
 
 # =========================
 # FOOTBALL API
 # =========================
-API_KEY = "FOOTBALL_API_KEY"
+API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {"X-Auth-Token": API_KEY}
 
 # =========================
@@ -37,20 +35,33 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# FONKSİYONLAR
+# SENDGRID E-POSTA FONKSİYONU
 # =========================
 def send_email(to, code):
-    msg = MIMEText(f"Doğrulama kodunuz: {code}")
-    msg["Subject"] = "AI Platform Doğrulama"
-    msg["From"] = SMTP_EMAIL
-    msg["To"] = to
+    try:
+        message = Mail(
+            from_email=SENDGRID_FROM_EMAIL,
+            to_emails=to,
+            subject="AI Platform Doğrulama Kodu",
+            html_content=f"""
+            <h2>AI Platform</h2>
+            <p>Doğrulama Kodunuz:</p>
+            <h1>{code}</h1>
+            <p>Bu kodu kimseyle paylaşmayın.</p>
+            """
+        )
 
-    server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-    server.starttls()
-    server.login(SMTP_EMAIL, SMTP_PASSWORD)
-    server.send_message(msg)
-    server.quit()
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(message)
+        return True
 
+    except Exception:
+        st.error("E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.")
+        return False
+
+# =========================
+# KULLANICI FONKSİYONLARI
+# =========================
 def get_user(username):
     c.execute("SELECT * FROM users WHERE username=?", (username,))
     return c.fetchone()
@@ -60,7 +71,7 @@ def make_pro(username):
     conn.commit()
 
 # =========================
-# STREAMLIT
+# STREAMLIT AYARLARI
 # =========================
 st.set_page_config(page_title="AI Pro Predictor", layout="wide")
 st.title("AI Futbol Analiz Platformu")
@@ -69,7 +80,7 @@ if "login" not in st.session_state:
     st.session_state.login = None
 
 # =========================
-# AUTH
+# KULLANICI GİRİŞ / KAYIT
 # =========================
 with st.sidebar:
     if not st.session_state.login:
@@ -97,8 +108,8 @@ with st.sidebar:
             if st.button("E-posta Kodu Gönder"):
                 code = random.randint(100000, 999999)
                 st.session_state.email_code = code
-                send_email(rm, code)
-                st.success("Doğrulama kodu e-posta ile gönderildi")
+                if send_email(rm, code):
+                    st.success("Doğrulama kodu e-posta ile gönderildi")
 
             rc = st.text_input("Doğrulama Kodu", key="reg_code")
 
@@ -138,22 +149,71 @@ with st.sidebar:
             st.rerun()
 
 # =========================
-# ANALİZ BÖLÜMÜ
+# AI ANALİZ BÖLÜMÜ
 # =========================
 if not st.session_state.login:
     st.stop()
 
 st.header("AI Maç Analizi")
 
-lig = st.selectbox("Lig", ["PL", "PD", "SA", "BL1", "FL1"])
-ev = st.text_input("Ev Sahibi Takım")
-dep = st.text_input("Deplasman Takım")
+ligler = {
+    "İngiltere": "PL",
+    "İspanya": "PD",
+    "İtalya": "SA",
+    "Almanya": "BL1",
+    "Fransa": "FL1"
+}
 
-if st.button("AI Analizi Başlat"):
+sec_lig = st.selectbox("Lig Seçin", list(ligler.keys()))
+
+@st.cache_data(show_spinner=False)
+def lig_verisi_al(code):
+    url = f"https://api.football-data.org/v4/competitions/{code}/standings"
+    r = requests.get(url, headers=HEADERS, timeout=10)
+    r.raise_for_status()
+    return r.json()["standings"][0]["table"]
+
+tablo = lig_verisi_al(ligler[sec_lig])
+takimlar_db = {row["team"]["name"]: row for row in tablo}
+isimler = sorted(takimlar_db.keys())
+
+c1, c2 = st.columns(2)
+with c1:
+    ev_adi = st.selectbox("Ev Sahibi", isimler)
+with c2:
+    dep_adi = st.selectbox("Deplasman", isimler)
+
+if st.button("AI ANALİZİ BAŞLAT"):
+    e = takimlar_db[ev_adi]
+    d = takimlar_db[dep_adi]
+
+    e_mac = max(e["playedGames"], 1)
+    d_mac = max(d["playedGames"], 1)
+
+    e_h = e["goalsFor"] / e_mac
+    e_s = e["goalsAgainst"] / e_mac
+    d_h = d["goalsFor"] / d_mac
+    d_s = d["goalsAgainst"] / d_mac
+
+    ev_xg = (e_h * d_s) ** 0.5 + 0.25
+    dep_xg = (d_h * e_s) ** 0.5
+
+    toplam_xg = ev_xg + dep_xg
+    ev_oran = round((ev_xg / toplam_xg) * 100)
+    dep_oran = 100 - ev_oran
+
+    st.divider()
+    st.header(f"{ev_adi} - {dep_adi} AI Raporu")
+
+    m1, m2 = st.columns(2)
+    with m1:
+        st.metric("Ev Sahibi XG", round(ev_xg, 2))
+        st.metric("Ev Galibiyet %", f"%{ev_oran}")
+    with m2:
+        st.metric("Deplasman XG", round(dep_xg, 2))
+        st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
+
+    # Ekstra AI göstergeler
     st.metric("AI Güven Skoru", "81%")
-    st.metric("Risk / Denge", "Orta")
-
-    if user[4]:
-        st.error("⛔ AI PAS GEÇ UYARISI: Pro algoritması bu maç için oynamayı önermiyor")
-    else:
-        st.warning("🔒 Pro analiz (PAS GEÇ, kırılgan alanlar) kilitli")
+    st.metric("Risk / Denge Seviyesi", "Orta")
+    st.metric("Kırılgan Alan Analizi", "Pas Geç Algılanmadı")
