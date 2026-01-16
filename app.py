@@ -37,7 +37,6 @@ st.sidebar.subheader("👤 Kullanıcı Paneli")
 if not st.session_state.logged_in:
     tab1, tab2 = st.sidebar.tabs(["🔑 Giriş", "📝 Kayıt"])
 
-    # ---- GİRİŞ ----
     with tab1:
         u = st.text_input("Kullanıcı Adı", key="login_user")
         p = st.text_input("Şifre", type="password", key="login_pass")
@@ -46,12 +45,10 @@ if not st.session_state.logged_in:
             if u in st.session_state.users and st.session_state.users[u]["password"] == p:
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
-                st.success("Giriş başarılı")
                 st.rerun()
             else:
-                st.error("Hatalı kullanıcı adı veya şifre")
+                st.error("Hatalı bilgiler")
 
-    # ---- KAYIT ----
     with tab2:
         ru = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
         rm = st.text_input("E-posta", key="reg_mail")
@@ -60,9 +57,9 @@ if not st.session_state.logged_in:
 
         if st.button("Kayıt Ol", key="reg_btn"):
             if ru in st.session_state.users:
-                st.error("Bu kullanıcı adı zaten alınmış")
+                st.error("Bu kullanıcı adı alınmış")
             elif not ru or not rpass:
-                st.error("Kullanıcı adı ve şifre zorunlu")
+                st.error("Zorunlu alanlar boş")
             else:
                 st.session_state.users[ru] = {
                     "password": rpass,
@@ -70,7 +67,7 @@ if not st.session_state.logged_in:
                     "phone": rp,
                     "pro": False
                 }
-                st.success("Kayıt başarılı, giriş yapabilirsiniz")
+                st.success("Kayıt başarılı")
 
 else:
     user = st.session_state.current_user
@@ -162,8 +159,12 @@ if st.button("AI ANALİZİ BAŞLAT", key="analyze_btn"):
         st.metric("Dep Galibiyet %", dep_oran)
 
     # =========================
-    # PAS GEÇ (SADECE PRO)
+    # PAS GEÇ + PRO GÖRÜNÜRLÜK
     # =========================
     if udata["pro"]:
-        if abs(ev_xg - dep_xg) < 0.15:
+        fark = abs(ev_xg - dep_xg)
+
+        if fark < 0.15:
             st.error("⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil.")
+        else:
+            st.success("🔥 PRO AI ONAYI: Bu maç Pro kriterlerine göre analiz edildi.")
