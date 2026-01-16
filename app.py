@@ -69,46 +69,66 @@ if st.button("AI ANALİZİ BAŞLAT"):
 
     col1, col2 = st.columns(2)
 
-    # EV SAHİBİ
+    # ===== EV SAHİBİ =====
     with col1:
         st.markdown(f"### 🏠 {ev_adi}")
 
         st.markdown("**Avantajlar**")
+        ev_adv = False
         if e_h > d_s:
             st.write("- Hücum gücü rakip savunmaya karşı etkili.")
+            ev_adv = True
         if e_s < d_s:
             st.write("- Savunması rakibe göre daha sağlam.")
+            ev_adv = True
         if ev_xg > dep_xg:
             st.write("- Gol beklentisi rakibinden yüksek.")
-        if ev_oran >= 55:
-            st.write("- İstatistiksel üstünlük ev sahibinde.")
+            ev_adv = True
+        if not ev_adv:
+            st.write("- Belirgin bir istatistiksel üstünlük bulunmuyor.")
 
         st.markdown("**Dezavantajlar**")
+        ev_dez = False
         if e_s > 1.5:
-            st.write("- Maç başına yenen gol ortalaması yüksek.")
+            st.write("- Savunmada maç başına fazla gol yiyor.")
+            ev_dez = True
         if e_h < 1.2:
-            st.write("- Hücum üretkenliği sınırlı.")
+            st.write("- Hücum üretkenliği düşük.")
+            ev_dez = True
         if abs(ev_xg - dep_xg) < 0.3:
-            st.write("- Rakiple güç farkı düşük.")
+            st.write("- Rakiple güç farkı çok az.")
+            ev_dez = True
+        if not ev_dez:
+            st.write("- Belirgin bir dezavantaj görünmüyor.")
 
-    # DEPLASMAN
+    # ===== DEPLASMAN =====
     with col2:
         st.markdown(f"### ✈️ {dep_adi}")
 
         st.markdown("**Avantajlar**")
+        dep_adv = False
         if d_h > e_s:
             st.write("- Hücum gücü ev sahibi savunmasına karşı etkili.")
+            dep_adv = True
         if d_s < e_s:
             st.write("- Savunması ev sahibine göre daha dengeli.")
+            dep_adv = True
         if dep_xg > ev_xg:
             st.write("- Gol beklentisi ev sahibinden yüksek.")
-        if dep_oran >= 45:
-            st.write("- Maçı dengeleyebilecek istatistiksel potansiyel var.")
+            dep_adv = True
+        if not dep_adv:
+            st.write("- Belirgin bir istatistiksel üstünlük bulunmuyor.")
 
         st.markdown("**Dezavantajlar**")
+        dep_dez = False
         if d_s > 1.5:
             st.write("- Savunmada açıklar mevcut.")
+            dep_dez = True
         if d_h < 1.2:
             st.write("- Hücum üretkenliği düşük.")
+            dep_dez = True
         if abs(ev_xg - dep_xg) < 0.3:
             st.write("- Ev sahibi ile güç farkı çok az.")
+            dep_dez = True
+        if not dep_dez:
+            st.write("- Belirgin bir dezavantaj görünmüyor.")
