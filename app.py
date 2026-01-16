@@ -65,28 +65,50 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
 
     st.divider()
-    st.subheader("Avantaj / Dezavantaj Nedenleri")
+    st.subheader("Avantaj / Dezavantaj Analizi")
 
-    av_col, dez_col = st.columns(2)
+    col1, col2 = st.columns(2)
 
-    with av_col:
-        st.markdown("### Avantaj Nedenleri")
-        if ev_xg > dep_xg:
-            st.write(f"- {ev_adi}, daha yüksek gol beklentisine sahip.")
-        if e_h > d_h:
-            st.write(f"- {ev_adi}, hücumda daha üretken.")
+    # EV SAHİBİ
+    with col1:
+        st.markdown(f"### 🏠 {ev_adi}")
+
+        st.markdown("**Avantajlar**")
+        if e_h > d_s:
+            st.write("- Hücum gücü rakip savunmaya karşı etkili.")
         if e_s < d_s:
-            st.write(f"- {ev_adi}, savunmada daha sağlam.")
+            st.write("- Savunması rakibe göre daha sağlam.")
+        if ev_xg > dep_xg:
+            st.write("- Gol beklentisi rakibinden yüksek.")
         if ev_oran >= 55:
             st.write("- İstatistiksel üstünlük ev sahibinde.")
 
-    with dez_col:
-        st.markdown("### Dezavantaj Nedenleri")
-        if dep_xg >= ev_xg:
-            st.write(f"- {dep_adi}, dengeyi bozabilecek hücum gücüne sahip.")
-        if e_s > d_s:
-            st.write(f"- {ev_adi}, savunmada rakibinden daha fazla gol yiyor.")
-        if ev_oran < 55:
-            st.write("- Galibiyet ihtimali net değil.")
-        if abs(ev_xg - dep_xg) < 0.30:
-            st.write("- Güç farkı düşük, sürpriz ihtimali var.")
+        st.markdown("**Dezavantajlar**")
+        if e_s > 1.5:
+            st.write("- Maç başına yenen gol ortalaması yüksek.")
+        if e_h < 1.2:
+            st.write("- Hücum üretkenliği sınırlı.")
+        if abs(ev_xg - dep_xg) < 0.3:
+            st.write("- Rakiple güç farkı düşük.")
+
+    # DEPLASMAN
+    with col2:
+        st.markdown(f"### ✈️ {dep_adi}")
+
+        st.markdown("**Avantajlar**")
+        if d_h > e_s:
+            st.write("- Hücum gücü ev sahibi savunmasına karşı etkili.")
+        if d_s < e_s:
+            st.write("- Savunması ev sahibine göre daha dengeli.")
+        if dep_xg > ev_xg:
+            st.write("- Gol beklentisi ev sahibinden yüksek.")
+        if dep_oran >= 45:
+            st.write("- Maçı dengeleyebilecek istatistiksel potansiyel var.")
+
+        st.markdown("**Dezavantajlar**")
+        if d_s > 1.5:
+            st.write("- Savunmada açıklar mevcut.")
+        if d_h < 1.2:
+            st.write("- Hücum üretkenliği düşük.")
+        if abs(ev_xg - dep_xg) < 0.3:
+            st.write("- Ev sahibi ile güç farkı çok az.")
