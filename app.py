@@ -65,18 +65,7 @@ if st.button("AI ANALİZİ BAŞLAT"):
     dep_oran = 100 - ev_oran
 
     fark = abs(ev_oran - dep_oran)
-
-    # =========================
-    # AI GÜVEN & RİSK
-    # =========================
     guven = min(100, round(fark * 1.5))
-
-    if fark < 10:
-        risk = "Yüksek Risk – Dengeli"
-    elif fark < 25:
-        risk = "Orta Risk"
-    else:
-        risk = "Düşük Risk – Net Taraf"
 
     # =========================
     # FORM
@@ -94,18 +83,18 @@ if st.button("AI ANALİZİ BAŞLAT"):
     dep_form = form(d["points"], d_mac)
 
     # =========================
-    # PAS GEÇ KARARI
+    # PAS GEÇ (SADECE PRO)
     # =========================
-    pas_gec_sayac = 0
-
-    if fark < 8:
-        pas_gec_sayac += 1
-    if guven < 25:
-        pas_gec_sayac += 1
-    if ev_form == dep_form:
-        pas_gec_sayac += 1
-
-    pas_gec = pas_gec_sayac >= 2
+    pas_gec = False
+    if premium:
+        sayac = 0
+        if fark < 8:
+            sayac += 1
+        if guven < 25:
+            sayac += 1
+        if ev_form == dep_form:
+            sayac += 1
+        pas_gec = sayac >= 2
 
     # =========================
     # AVANTAJ / DEZAVANTAJ
@@ -127,10 +116,10 @@ if st.button("AI ANALİZİ BAŞLAT"):
     st.divider()
     st.header(f"{ev_adi} - {dep_adi} AI Maç Raporu")
 
-    if pas_gec:
-        st.error("⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil.")
+    if premium and pas_gec:
+        st.error("⛔ AI PAS GEÇ: Bu maç Pro analizine göre risklidir.")
     else:
-        st.success("✅ AI Onayı: Analiz edilebilir maç")
+        st.success("✅ AI Analiz: Maç analiz edilebilir.")
 
     m1, m2, m3 = st.columns(3)
     with m1:
@@ -152,4 +141,4 @@ if st.button("AI ANALİZİ BAŞLAT"):
             st.write(f"Avantaj: {dep_av}")
             st.write(f"Dezavantaj: {dep_dez}")
     else:
-        st.info("🔒 PAS GEÇ gerekçeleri ve detaylar için Pro Modu aç")
+        st.info("🔒 PAS GEÇ uyarıları ve detaylı analizler Pro Mod’da açılır.")
