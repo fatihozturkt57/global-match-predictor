@@ -5,9 +5,10 @@ import requests
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="AI Match Engine v5", layout="wide")
-st.title("🤖 AI Destekli Profesyonel Maç Simülatörü")
+st.set_page_config(page_title="AI Pro Predictor", layout="wide")
+st.title("⚽ Yapay Zeka Destekli Maç Çarpıştırma Paneli")
 
+# Ligler
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 
@@ -30,43 +31,36 @@ if tablo:
     with c1: ev_adi = st.selectbox("Ev Sahibi Takım", takimlar)
     with c2: dep_adi = st.selectbox("Deplasman Takımı", takimlar)
 
-    if st.button("🧠 AI ANALİZİ ÇALIŞTIR"):
+    if st.button("🧠 AI ANALİZİ VE SİMÜLASYONU BAŞLAT"):
         e, d = veriler[ev_adi], veriler[dep_adi]
         
-        # --- AI MOTORU: GÜÇ PARAMETRELERİ ---
-        e_hucum = e['goalsFor'] / e['playedGames']
-        e_defans = e['goalsAgainst'] / e['playedGames']
-        d_hucum = d['goalsFor'] / d['playedGames']
-        d_defans = d['goalsAgainst'] / d['playedGames']
+        # --- VERİ MADENCİLİĞİ (Data Mining) ---
+        e_mac, d_mac = e['playedGames'], d['playedGames']
+        e_hucum, e_defans = e['goalsFor'] / e_mac, e['goalsAgainst'] / e_mac
+        d_hucum, d_defans = d['goalsFor'] / d_mac, d['goalsAgainst'] / d_mac
         
-        # Avantaj Skorları (AI Mantığı)
-        # Bir takımın hücumu, rakibin defansından ne kadar güçlü?
-        e_ustunluk = e_hucum - d_defans
-        d_ustunluk = d_hucum - e_defans
+        # --- AI SKOR VE İSTATİSTİK MOTORU ---
+        # Ev sahibi avantajı +0.2 eklenerek simüle edilir
+        gol_ev = (e_hucum + d_defans) / 2 + 0.2
+        gol_dep = (d_hucum + e_defans) / 2
         
-        # --- 1. TAHMİN MERKEZİ ---
-        st.subheader("🎯 Yapay Zeka Skor Tahminleri")
-        m1, m2, m3, m4 = st.columns(4)
-        
-        # Skor Simülasyonu
-        skor_e = round(e_hucum * (d_defans / 1.2) + 0.3)
-        skor_d = round(d_hucum * (e_defans / 1.2))
-        
-        m1.metric("Maç Sonu (MS)", f"{skor_e} - {skor_d}")
-        m2.metric("İlk Yarı (İY)", f"{round(skor_e/2)} - {round(skor_d/2)}")
-        
-        # Korner ve Kart (Takımların agresiflik ve baskı verisinden)
-        korner = round(8 + (e_hucum + d_hucum) * 1.5)
-        kart = round(2 + (e_defans + d_defans) * 2)
-        
-        m3.metric("Tahmini Korner", f"{korner}+")
-        m4.metric("Tahmini Kart", f"{kart}+")
+        ms_e, ms_d = round(gol_ev), round(gol_dep)
+        iy_e, iy_d = (1, 0) if gol_ev > 1.5 else (0, 0)
+        if gol_dep > 1.8: iy_d = 1
 
-        # --- 2. AVANTAJ / DEZAVANTAJ (KRİTİK ANALİZ) ---
+        # Korner & Kart Algoritması (Baskı ve Sertlik Analizi)
+        korner_skoru = round(7 + (e_hucum * 1.8) + (d_hucum * 1.2))
+        kart_skoru = round(2 + (e_defans + d_defans) * 1.5)
+
+        # --- EKRAN ÇIKTISI ---
         st.divider()
-        st.subheader("⚖️ AI Çarpıştırma Raporu")
-        a1, a2 = st.columns(2)
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("📊 MS TAHMİNİ", f"{ms_e} - {ms_d}")
+        col2.metric("🌓 İY TAHMİNİ", f"{iy_e} - {iy_d}")
+        col3.metric("🚩 KORNER", f"{korner_skoru}+")
+        col4.metric("🟨 KART", f"{kart_skoru}+")
+
+        st.divider()
         
-        with a1:
-            st.markdown(f"### 🏠 {ev_adi}")
-            if e_huc
+        # --- AVANTAJ / DEZAVANTAJ TABLOSU ---
+        st.subheader("⚔️ Takım Kapışması: Avantaj & Dezavantaj")
