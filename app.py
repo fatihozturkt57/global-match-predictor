@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import random
 
 # =========================
 # API AYARLARI
@@ -29,6 +30,13 @@ if "logged_in" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
 
+# --- doğrulama için ---
+if "verify_code" not in st.session_state:
+    st.session_state.verify_code = None
+
+if "verified" not in st.session_state:
+    st.session_state.verified = False
+
 # =========================
 # KULLANICI PANELİ
 # =========================
@@ -37,6 +45,7 @@ st.sidebar.subheader("👤 Kullanıcı Paneli")
 if not st.session_state.logged_in:
     tab1, tab2 = st.sidebar.tabs(["🔑 Giriş", "📝 Kayıt"])
 
+    # ---- GİRİŞ ----
     with tab1:
         u = st.text_input("Kullanıcı Adı", key="login_user")
         p = st.text_input("Şifre", type="password", key="login_pass")
@@ -47,17 +56,33 @@ if not st.session_state.logged_in:
                 st.session_state.current_user = u
                 st.rerun()
             else:
-                st.error("Hatalı bilgiler")
+                st.error("Hatalı kullanıcı adı veya şifre")
 
+    # ---- KAYIT ----
     with tab2:
         ru = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
         rm = st.text_input("E-posta", key="reg_mail")
         rp = st.text_input("Telefon", key="reg_phone")
         rpass = st.text_input("Şifre", type="password", key="reg_pass")
 
+        if st.button("📩 Doğrulama Kodu Gönder (Demo)", key="send_code"):
+            st.session_state.verify_code = random.randint(100000, 999999)
+            st.warning(f"Demo doğrulama kodu: {st.session_state.verify_code}")
+
+        code_input = st.text_input("📲 Doğrulama Kodu", key="verify_input")
+
+        if st.button("✅ Kodu Doğrula", key="verify_btn"):
+            if str(code_input) == str(st.session_state.verify_code):
+                st.session_state.verified = True
+                st.success("Doğrulama başarılı")
+            else:
+                st.error("Kod yanlış")
+
         if st.button("Kayıt Ol", key="reg_btn"):
-            if ru in st.session_state.users:
-                st.error("Bu kullanıcı adı alınmış")
+            if not st.session_state.verified:
+                st.error("E-posta / telefon doğrulaması gerekli")
+            elif ru in st.session_state.users:
+                st.error("Bu kullanıcı adı zaten alınmış")
             elif not ru or not rpass:
                 st.error("Zorunlu alanlar boş")
             else:
@@ -67,7 +92,7 @@ if not st.session_state.logged_in:
                     "phone": rp,
                     "pro": False
                 }
-                st.success("Kayıt başarılı")
+                st.success("Kayıt başarılı, giriş yapabilirsiniz")
 
 else:
     user = st.session_state.current_user
@@ -158,13 +183,12 @@ if st.button("AI ANALİZİ BAŞLAT", key="analyze_btn"):
         st.metric("Dep XG", round(dep_xg, 2))
         st.metric("Dep Galibiyet %", dep_oran)
 
-    # =========================
-    # PAS GEÇ + PRO GÖRÜNÜRLÜK
-    # =========================
+    # --- PRO MESAJI ---
     if udata["pro"]:
         fark = abs(ev_xg - dep_xg)
-
         if fark < 0.15:
             st.error("⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil.")
         else:
             st.success("🔥 PRO AI ONAYI: Bu maç Pro kriterlerine göre analiz edildi.")
+    else:
+        st.info("🔒 Bu maç için ileri seviye AI değerlendirmeleri Pro üyelikte açılır.")
