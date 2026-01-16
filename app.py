@@ -33,44 +33,67 @@ if tablo:
     if st.button("🧠 AI ANALİZİNİ BAŞLAT"):
         e, d = veriler[ev_adi], veriler[dep_adi]
         
-        # --- AI PARAMETRELERİ (GÜÇ ENDEKSLERİ) ---
-        e_hucum = e['goalsFor'] / e['playedGames']
-        e_savunma = e['goalsAgainst'] / e['playedGames']
-        d_hucum = d['goalsFor'] / d['playedGames']
-        d_savunma = d['goalsAgainst'] / d['playedGames']
+        # --- AI PARAMETRELERİ ---
+        e_mac, d_mac = e['playedGames'], d['playedGames']
         
-        # AI Tahmin Algoritması: Poisson & Power Rating Kombinasyonu
-        # Ev sahibinin beklenen golü, rakibin defans zafiyetiyle çarpılarak AI tarafından hesaplanır
-        ai_ev_skor = e_hucum * (d_savunma / 1.1) + 0.2
-        ai_dep_skor = d_hucum * (e_savunma / 1.1)
-        
-        st.divider()
-        st.subheader(f"🤖 AI Tahmin Raporu: {ev_adi} vs {dep_adi}")
-
-        # --- TAHMİN METRİKLERİ ---
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("MS Beklenen Skor", f"{round(ai_ev_skor, 1)} - {round(ai_dep_skor, 1)}")
-        m2.metric("İY Olasılığı", f"{1 if ai_ev_skor > 1.8 else 0} - {1 if ai_dep_skor > 2.0 else 0}")
-        m3.metric("Korner Tahmini", f"{int(7.5 + (e_hucum + d_hucum) * 1.6)}+")
-        m4.metric("Kart Tahmini", f"{int(2 + (e_savunma + d_savunma) * 1.4)}+")
-
-        st.divider()
-
-        # --- AI STRATEJİK ANALİZ (AVANTAJ & DEZAVANTAJ) ---
-        col_ev, col_dep = st.columns(2)
-        
-        with col_ev:
-            st.info(f"🏠 {ev_adi} AI Karar Paneli")
-            # AI Karşılaştırmalı Mantık
-            if e_hucum > d_savunma:
-                st.success(f"🔥 **AI ANALİZİ:** Ev sahibi hücum hattı, rakip defansı bozacak kapasitede. Skor üretme şansı %{round((e_hucum/d_savunma)*50, 1)}")
-            else:
-                st.error("⚠️ **AI ANALİZİ:** Rakip defans bloğu sizin hücum varyasyonlarınızı kısıtlayabilir.")
+        if e_mac > 0 and d_mac > 0:
+            e_hucum = e['goalsFor'] / e_mac
+            e_savunma = e['goalsAgainst'] / e_mac
+            d_hucum = d['goalsFor'] / d_mac
+            d_savunma = d['goalsAgainst'] / d_mac
             
-            if e_savunma < 1.0:
-                st.success("🛡️ **DEFANSİF GÜVEN:** Takım kalesini kapatma konusunda lig ortalamasının üzerinde.")
+            # AI Tahmin Algoritması
+            ai_ev_skor = e_hucum * (d_savunma / 1.1) + 0.25
+            ai_dep_skor = d_hucum * (e_savunma / 1.1)
+            
+            st.divider()
+            st.subheader(f"🤖 AI Tahmin Raporu: {ev_adi} vs {dep_adi}")
 
-        with col_dep:
-            st.info(f"🚀 {dep_adi} AI Karar Paneli")
-            if d_hucum > e_savunma:
-                st.success(f"⚡
+            # --- TAHMİN METRİKLERİ ---
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("MS Beklenen Skor", f"{round(ai_ev_skor, 1)} - {round(ai_dep_skor, 1)}")
+            m2.metric("İY Olasılığı", f"{1 if ai_ev_skor > 1.8 else 0} - {1 if ai_dep_skor > 2.0 else 0}")
+            m3.metric("Korner Tahmini", f"{int(7.5 + (e_hucum + d_hucum) * 1.6)}+")
+            m4.metric("Kart Tahmini", f"{int(2 + (e_savunma + d_savunma) * 1.4)}+")
+
+            st.divider()
+
+            # --- AI STRATEJİK ANALİZ ---
+            col_ev, col_dep = st.columns(2)
+            
+            with col_ev:
+                st.info(f"🏠 {ev_adi} AI Analiz")
+                if e_hucum > d_savunma:
+                    st.success(f"🔥 **Hücum Avantajı:** Rakip defansı bozacak kapasitede.")
+                else:
+                    st.error("⚠️ **Hücum Dezavantajı:** Rakip defans bloğu sizi kısıtlayabilir.")
+                
+                if e_savunma < 1.0:
+                    st.success("🛡️ **Defans Gücü:** Kalesini kapatma başarısı yüksek.")
+
+            with col_dep:
+                st.info(f"🚀 {dep_adi} AI Analiz")
+                if d_hucum > e_savunma:
+                    st.success(f"⚡ **Hücum Avantajı:** Kontra ataklarla etkili olabilir.")
+                else:
+                    st.error("📉 **Hücum Dezavantajı:** Ofansif verimlilik yeterli görünmüyor.")
+                
+                if d_savunma > 1.5:
+                    st.error("❌ **Defans Dezavantajı:** Arka hatta ciddi boşluklar veriliyor.")
+
+            # --- AI GÜVEN ENDEKSİ ---
+            st.divider()
+            fark = abs(ai_ev_skor - ai_dep_skor)
+            güven = min(95.0, round(fark * 50 + 40, 1))
+            
+            if ai_ev_skor > ai_dep_skor + 0.3:
+                st.success(f"💡 **AI Tahmini:** {ev_adi} Galibiyeti | **Güven:** %{güven}")
+            elif ai_dep_skor > ai_ev_skor + 0.3:
+                st.error(f"💡 **AI Tahmini:** {dep_adi} Sürprizi/Galibiyeti | **Güven:** %{güven}")
+            else:
+                st.warning(f"💡 **AI Tahmini:** Beraberlik İhtimali Yüksek | **Güven:** %{60}")
+        else:
+            st.warning("Seçilen takımların henüz yeterli verisi (oynanmış maçı) yok.")
+
+else:
+    st.error("Lig verileri yüklenemedi. API anahtarını kontrol edin.")
