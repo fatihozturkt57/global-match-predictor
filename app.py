@@ -67,14 +67,9 @@ if st.button("AI ANALİZİ BAŞLAT"):
     fark = abs(ev_oran - dep_oran)
 
     # =========================
-    # AI GÜVEN & KARARSIZ
+    # AI GÜVEN & RİSK
     # =========================
     guven = min(100, round(fark * 1.5))
-
-    if fark < 8:
-        etiket = "⚠️ AI Kararsız Maç"
-    else:
-        etiket = "✅ Analiz Uygun"
 
     if fark < 10:
         risk = "Yüksek Risk – Dengeli"
@@ -99,15 +94,29 @@ if st.button("AI ANALİZİ BAŞLAT"):
     dep_form = form(d["points"], d_mac)
 
     # =========================
+    # PAS GEÇ KARARI
+    # =========================
+    pas_gec_sayac = 0
+
+    if fark < 8:
+        pas_gec_sayac += 1
+    if guven < 25:
+        pas_gec_sayac += 1
+    if ev_form == dep_form:
+        pas_gec_sayac += 1
+
+    pas_gec = pas_gec_sayac >= 2
+
+    # =========================
     # AVANTAJ / DEZAVANTAJ
     # =========================
     def av_dez(h, s):
         if h > lig_h and s < lig_s:
-            return "Genel Lig Üstü Performans", "Belirgin Zaaf Yok"
+            return "Lig Üstü Performans", "Belirgin Zaaf Yok"
         elif h < lig_h:
             return "Savunma Dengesi", "Hücum Yetersizliği"
         else:
-            return "Hücum Etkisi", "Savunma Açıkları"
+            return "Hücum Gücü", "Savunma Açıkları"
 
     ev_av, ev_dez = av_dez(e_h, e_s)
     dep_av, dep_dez = av_dez(d_h, d_s)
@@ -117,18 +126,19 @@ if st.button("AI ANALİZİ BAŞLAT"):
     # =========================
     st.divider()
     st.header(f"{ev_adi} - {dep_adi} AI Maç Raporu")
-    st.subheader(etiket)
+
+    if pas_gec:
+        st.error("⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil.")
+    else:
+        st.success("✅ AI Onayı: Analiz edilebilir maç")
 
     m1, m2, m3 = st.columns(3)
     with m1:
-        st.metric("Ev XG", round(ev_xg, 2))
         st.metric("Ev %", f"%{ev_oran}")
     with m2:
-        st.metric("Dep XG", round(dep_xg, 2))
         st.metric("Dep %", f"%{dep_oran}")
     with m3:
         st.metric("AI Güven", f"%{guven}")
-        st.metric("Risk", risk)
 
     if premium:
         st.subheader("🔥 Pro Detay Analiz")
@@ -142,25 +152,4 @@ if st.button("AI ANALİZİ BAŞLAT"):
             st.write(f"Avantaj: {dep_av}")
             st.write(f"Dezavantaj: {dep_dez}")
     else:
-        st.info("🔒 Pro Modu açarak detaylı analizlere erişebilirsin")
-
-# =========================
-# GÜVENLİ MAÇLAR
-# =========================
-if premium:
-    st.divider()
-    st.subheader("⭐ Ligde En Güvenli Takımlar")
-
-    guven_list = []
-    for t in tablo:
-        mac = max(t["playedGames"], 1)
-        h = t["goalsFor"] / mac
-        s = t["goalsAgainst"] / mac
-        xg = (h * (lig_s)) ** 0.5
-        guven_list.append((t["team"]["name"], round(xg, 2)))
-
-    guven_list = sorted(guven_list, key=lambda x: x[1], reverse=True)[:3]
-
-    for i, (ad, skor) in enumerate(guven_list, 1):
-        st.write(f"{i}. **{ad}** – Güven Skoru: {skor}")
-
+        st.info("🔒 PAS GEÇ gerekçeleri ve detaylar için Pro Modu aç")
