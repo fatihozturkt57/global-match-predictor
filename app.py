@@ -5,23 +5,17 @@ import requests
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="Pro Analiz Paneli v2", layout="wide")
-st.title("⚽ Profesyonel Maç Analiz & Tahmin Sistemi")
+st.set_page_config(page_title="Pro Analiz v3", layout="wide")
+st.title("⚽ Gerçek Veri Tabanlı Analiz Sistemi")
 
-ligler = {
-    "İngiltere": "PL", 
-    "İspanya": "PD", 
-    "İtalya": "SA", 
-    "Almanya": "BL1", 
-    "Fransa": "FL1"
-}
+ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 
 @st.cache_data
 def veri_cek(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
-    response = requests.get(url, headers=HEADERS)
-    return response.json()['standings'][0]['table']
+    res = requests.get(url, headers=HEADERS).json()
+    return res['standings'][0]['table']
 
 try:
     tablo = veri_cek(ligler[sec_lig])
@@ -29,68 +23,51 @@ try:
     takimlar = sorted(list(veriler.keys()))
 
     col1, col2 = st.columns(2)
-    with col1: ev = st.selectbox("Ev Sahibi Takım", takimlar)
-    with col2: dep = st.selectbox("Deplasman Takımı", takimlar)
+    with col1: ev = st.selectbox("Ev Sahibi", takimlar)
+    with col2: dep = st.selectbox("Deplasman", takimlar)
 
-    if st.button("🔍 GERÇEK VERİYLE ANALİZ ET"):
+    if st.button("🔍 TAKIM KARAKTERİNİ ANALİZ ET"):
         e, d = veriler[ev], veriler[dep]
         
-        # --- VERİ ANALİZİ ---
-        e_mac = e['playedGames']
-        d_mac = d['playedGames']
-        
-        # 1. Gol Beklentisi (xG) Hesabı
-        e_hucum = e['goalsFor'] / e_mac
-        e_savunma = e['goalsAgainst'] / e_mac
-        d_hucum = d['goalsFor'] / d_mac
-        d_savunma = d['goalsAgainst'] / d_mac
-        
-        # Ev sahibi avantajı (+0.3) ve çapraz eşleşme
-        e_skor_tahmin = (e_hucum + d_savunma) / 2 + 0.3
-        d_skor_tahmin = (d_hucum + e_savunma) / 2
-        
-        # 2. Dinamik Korner Tahmini (Hücum gücü arttıkça korner artar)
-        # Toplam gol beklentisi üzerinden bir katsayı (Hücumcu takımlar = daha çok korner)
-        korner_baz = 7.5
-        korner_tahmin = korner_baz + (e_hucum + d_hucum) * 1.2
-        
-        # 3. Dinamik Kart Tahmini (Savunma zayıflığı ve rekabet)
-        # Savunması kötü takımlar daha çok faul yapar / Maç çekişmeliyse kart artar
-        kart_baz = 2.5
-        kart_tahmin = kart_baz + (e_savunma + d_savunma) * 0.8
-        
-        # 4. İY Skoru (Genelde maçın ilk yarısında toplam golün %40'ı atılır)
-        iy_e = round(e_skor_tahmin * 0.45)
-        iy_d = round(d_skor_tahmin * 0.40)
+        # --- TAKIM KARAKTERİ HESAPLAMA (Gerçek Tablo Verisinden) ---
+        def karakter_analizi(t):
+            win_rate = t['won'] / t['playedGames']
+            gf_rate = t['goalsFor'] / t['playedGames']
+            ga_rate = t['goalsAgainst'] / t['playedGames']
+            
+            # Karakter Belirleme
+            if win_rate > 0.6 and gf_rate > 2: style = "Hücum Makinesi"
+            elif ga_rate < 1.0: style = "Savunma Duvarı"
+            elif win_rate < 0.3: style = "Formsuz / Dirençsiz"
+            else: style = "Dengeli / Taktiksel"
+            
+            return {"win": win_rate, "gf": gf_rate, "ga": ga_rate, "style": style}
 
-        # --- GÖRSELLEŞTİRME ---
+        e_analiz = karakter_analizi(e)
+        d_analiz = karakter_analizi(d)
+
+        # --- GERÇEKÇİ İSTATİSTİK ALGORİTMASI ---
+        # Korner: Hücum gücü yüksek ve dengeli maçlarda artar
+        korner_tahmin = 8.0 + (e_analiz['gf'] * 1.5) + (d_analiz['gf'] * 0.5)
+        
+        # Kart: Savunma zayıfsa ve takımlar birbirine yakınsa (rekabet) artar
+        rekabet = 1.5 if abs(e_analiz['win'] - d_analiz['win']) < 0.2 else 0.5
+        kart_tahmin = 2.0 + (e_analiz['ga'] + d_analiz['ga']) + rekabet
+
+        # İlk Yarı: Güçlü takımlar genelde İY gol atar
+        iy_gol_olasili_e = 1 if e_analiz['gf'] > 1.8 else 0
+        iy_gol_olasili_d = 1 if d_analiz['gf'] > 2.2 else 0
+
+        # --- PANEL GÖSTERİMİ ---
         st.divider()
-        st.subheader("🎯 Takım Verilerine Dayalı Tahminler")
-        k1, k2, k3, k4 = st.columns(4)
-        
-        k1.metric("Beklenen Skor", f"{round(e_skor_tahmin)}-{round(d_skor_tahmin)}")
-        k2.metric("Tahmini Korner", f"{round(korner_tahmin, 1)}+")
-        k3.metric("Tahmini Kart", f"{round(kart_tahmin, 1)}+")
-        k4.metric("İlk Yarı Skoru", f"{iy_e}-{iy_d}")
+        c1, c2 = st.columns(2)
+        with c1: st.info(f"🏠 {ev} Stili: **{e_analiz['style']}**")
+        with c2: st.info(f"🚀 {dep} Stili: **{d_analiz['style']}**")
 
-        st.divider()
-        # Dinamik Analiz Notları
-        st.subheader("🔬 Taktiksel Veri Analizi")
-        a1, a2 = st.columns(2)
+        st.subheader("📊 Maç Dinamikleri")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Tahmini Korner", f"{round(korner_tahmin)}")
+        m2.metric("Tahmini Kart", f"{round(kart_tahmin)}")
+        m3.metric("İY Skoru", f"{iy_gol_olasili_e} - {iy_gol_olasili_d}")
 
-        with a1:
-            st.info(f"🏠 {ev}")
-            st.write(f"**Maç Başı Gol:** {round(e_hucum, 2)}")
-            if e_hucum > 2.0: st.success("🔥 Olağanüstü hücum hattı.")
-            if e_savunma < 1.0: st.success("🛡️ Defans bloğu çok sağlam.")
-            else: st.warning("⚠️ Savunmada boşluklar veriyor.")
-
-        with a2:
-            st.info(f"🚀 {dep}")
-            st.write(f"**Maç Başı Gol:** {round(d_hucum, 2)}")
-            if d_hucum > e_hucum: st.warning("⚡ Deplasman takımı gol yollarında daha üretken.")
-            if d['lost'] < 5: st.success("📈 Yenilmesi zor bir takım.")
-            else: st.error("📉 Kaybetme alışkanlığı oluşmuş.")
-
-except Exception as e:
-    st.error(f"Bir hata oluştu veya API limiti doldu. Lütfen tekrar deneyin. Hata: {e}")
+        #
