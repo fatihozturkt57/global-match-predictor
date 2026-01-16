@@ -7,6 +7,11 @@ HEADERS = {"X-Auth-Token": API_KEY}
 st.set_page_config(page_title="AI Pro Analiz", layout="wide")
 st.title("AI Veri Madenciliği & Stratejik Analiz")
 
+# =========================
+# PREMIUM MOD
+# =========================
+premium = st.sidebar.toggle("🔥 Pro Modu Aç", value=False)
+
 @st.cache_data(show_spinner=False)
 def lig_verisi_al(code):
     url = f"https://api.football-data.org/v4/competitions/{code}/standings"
@@ -54,72 +59,89 @@ if st.button("AI ANALİZİ BAŞLAT"):
     dep_oran = 100 - ev_oran
 
     # =========================
-    # 1️⃣ AI GÜVEN SKORU
+    # AI GÜVEN & RİSK
     # =========================
-    guven_skoru = min(100, round(abs(ev_oran - dep_oran) * 1.5))
+    guven = min(100, round(abs(ev_oran - dep_oran) * 1.5))
 
-    # =========================
-    # 2️⃣ RİSK / DENGE SEVİYESİ
-    # =========================
     if abs(ev_oran - dep_oran) < 10:
-        risk = "Yüksek Risk – Sürprize Açık"
+        risk = "Yüksek Risk"
     elif abs(ev_oran - dep_oran) < 25:
-        risk = "Orta Risk – Dengeli Maç"
+        risk = "Orta Risk"
     else:
-        risk = "Düşük Risk – Net Favori"
+        risk = "Düşük Risk"
 
     # =========================
-    # 3️⃣ KIRILGAN ALAN ANALİZİ
+    # SKOR TAHMİNİ
     # =========================
-    def kirilgan_alan(h, s):
-        if s > h:
-            return "Savunma Kırılgan"
-        elif h > s:
-            return "Hücum Güçlü"
+    ev_gol = round(ev_xg)
+    dep_gol = round(dep_xg)
+    skor_tahmini = f"{ev_gol}-{dep_gol}"
+
+    # =========================
+    # KG VAR / ÜST-ALT
+    # =========================
+    kg_var = "KG Var" if ev_gol > 0 and dep_gol > 0 else "KG Yok"
+    ust_alt = "Üst 2.5" if toplam_xg >= 2.7 else "Alt 2.5"
+
+    # =========================
+    # FORM (SON 5 MAÇ – YAKLAŞIK)
+    # =========================
+    def form_hesap(puan, mac):
+        oran = puan / max(mac * 3, 1)
+        if oran > 0.6:
+            return "İyi Form"
+        elif oran > 0.4:
+            return "Orta Form"
         else:
-            return "Denge Zayıf"
+            return "Zayıf Form"
 
-    ev_kirilgan = kirilgan_alan(e_h, e_s)
-    dep_kirilgan = kirilgan_alan(d_h, d_s)
+    ev_form = form_hesap(e["points"], e_mac)
+    dep_form = form_hesap(d["points"], d_mac)
 
     # =========================
-    # AVANTAJ / DEZAVANTAJ (ZORUNLU)
+    # AVANTAJ / DEZAVANTAJ
     # =========================
-    def avantaj_dezavantaj(h, s):
+    def av_dez(h, s):
         if h > s:
-            return "Hücum Etkinliği Avantaj", "Savunma Açıkları Dezavantaj"
+            return "Hücum Gücü", "Savunma Açıkları"
         else:
-            return "Savunma Direnci Avantaj", "Hücum Üretkenliği Dezavantaj"
+            return "Savunma Direnci", "Hücum Zayıflığı"
 
-    ev_av, ev_dez = avantaj_dezavantaj(e_h, e_s)
-    dep_av, dep_dez = avantaj_dezavantaj(d_h, d_s)
+    ev_av, ev_dez = av_dez(e_h, e_s)
+    dep_av, dep_dez = av_dez(d_h, d_s)
 
     # =========================
-    # GÖRSEL RAPOR
+    # RAPOR
     # =========================
     st.divider()
-    st.header(f"{ev_adi} - {dep_adi} AI Raporu")
+    st.header(f"{ev_adi} - {dep_adi} AI Maç Raporu")
 
     m1, m2, m3 = st.columns(3)
     with m1:
-        st.metric("Ev Sahibi XG", round(ev_xg, 2))
-        st.metric("Ev Galibiyet %", f"%{ev_oran}")
+        st.metric("Ev XG", round(ev_xg, 2))
+        st.metric("Ev %", f"%{ev_oran}")
     with m2:
-        st.metric("Deplasman XG", round(dep_xg, 2))
-        st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
+        st.metric("Dep XG", round(dep_xg, 2))
+        st.metric("Dep %", f"%{dep_oran}")
     with m3:
-        st.metric("AI Güven Skoru", f"%{guven_skoru}")
-        st.metric("Risk Seviyesi", risk)
+        st.metric("AI Güven", f"%{guven}")
+        st.metric("Risk", risk)
 
-    st.subheader("🔍 Taktiksel Analiz")
+    st.subheader("📌 Temel Tahminler")
+    st.write(f"**Skor Tahmini:** {skor_tahmini}")
+    st.write(f"**KG:** {kg_var}")
+    st.write(f"**Üst / Alt:** {ust_alt}")
 
-    a1, a2 = st.columns(2)
-    with a1:
-        st.markdown(f"**{ev_adi} Avantajı:** {ev_av}")
-        st.markdown(f"**{ev_adi} Dezavantajı:** {ev_dez}")
-        st.markdown(f"**Kırılgan Alan:** {ev_kirilgan}")
-
-    with a2:
-        st.markdown(f"**{dep_adi} Avantajı:** {dep_av}")
-        st.markdown(f"**{dep_adi} Dezavantajı:** {dep_dez}")
-        st.markdown(f"**Kırılgan Alan:** {dep_kirilgan}")
+    if premium:
+        st.subheader("🔥 Pro Analiz (Premium)")
+        p1, p2 = st.columns(2)
+        with p1:
+            st.write(f"**{ev_adi} Form:** {ev_form}")
+            st.write(f"Avantaj: {ev_av}")
+            st.write(f"Dezavantaj: {ev_dez}")
+        with p2:
+            st.write(f"**{dep_adi} Form:** {dep_form}")
+            st.write(f"Avantaj: {dep_av}")
+            st.write(f"Dezavantaj: {dep_dez}")
+    else:
+        st.info("🔒 Pro analiz için Premium Modu aç")
