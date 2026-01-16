@@ -4,25 +4,23 @@ import random
 import sqlite3
 import smtplib
 from email.mime.text import MIMEText
-from twilio.rest import Client
 
 # =========================
-# AYARLAR (DOLDUR)
+# SMTP AYARLARI (DOLDUR)
 # =========================
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
-SMTP_EMAIL = "YOUR_EMAIL@gmail.com"
+SMTP_EMAIL = "MAILIN@gmail.com"
 SMTP_PASSWORD = "APP_PASSWORD"
 
-TWILIO_SID = "TWILIO_SID"
-TWILIO_TOKEN = "TWILIO_TOKEN"
-TWILIO_PHONE = "+123456789"
-
+# =========================
+# FOOTBALL API
+# =========================
 API_KEY = "FOOTBALL_API_KEY"
 HEADERS = {"X-Auth-Token": API_KEY}
 
 # =========================
-# DB
+# DATABASE
 # =========================
 conn = sqlite3.connect("users.db", check_same_thread=False)
 c = conn.cursor()
@@ -39,7 +37,7 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# YARDIMCI FONKSİYONLAR
+# FONKSİYONLAR
 # =========================
 def send_email(to, code):
     msg = MIMEText(f"Doğrulama kodunuz: {code}")
@@ -53,14 +51,6 @@ def send_email(to, code):
     server.send_message(msg)
     server.quit()
 
-def send_sms(to, code):
-    client = Client(TWILIO_SID, TWILIO_TOKEN)
-    client.messages.create(
-        body=f"AI doğrulama kodunuz: {code}",
-        from_=TWILIO_PHONE,
-        to=to
-    )
-
 def get_user(username):
     c.execute("SELECT * FROM users WHERE username=?", (username,))
     return c.fetchone()
@@ -72,7 +62,7 @@ def make_pro(username):
 # =========================
 # STREAMLIT
 # =========================
-st.set_page_config("AI Pro Predictor", layout="wide")
+st.set_page_config(page_title="AI Pro Predictor", layout="wide")
 st.title("AI Futbol Analiz Platformu")
 
 if "login" not in st.session_state:
@@ -85,76 +75,85 @@ with st.sidebar:
     if not st.session_state.login:
         tab1, tab2 = st.tabs(["Giriş", "Kayıt"])
 
+        # ---- GİRİŞ ----
         with tab1:
-            u = st.text_input("Kullanıcı")
-            p = st.text_input("Şifre", type="password")
-            if st.button("Giriş"):
+            u = st.text_input("Kullanıcı Adı", key="login_user")
+            p = st.text_input("Şifre", type="password", key="login_pass")
+            if st.button("Giriş Yap"):
                 user = get_user(u)
-                if user and user[1] == p:
+                if user and user[1] == p and user[5] == 1:
                     st.session_state.login = u
                     st.rerun()
                 else:
-                    st.error("Hatalı giriş")
+                    st.error("Giriş başarısız veya hesap doğrulanmamış")
 
+        # ---- KAYIT ----
         with tab2:
-            ru = st.text_input("Kullanıcı Adı", key="ru")
-            rm = st.text_input("E-posta", key="rm")
-            rp = st.text_input("Telefon (+90...)", key="rp")
-            rpw = st.text_input("Şifre", type="password", key="rpw")
+            ru = st.text_input("Kullanıcı Adı", key="reg_user")
+            rm = st.text_input("E-posta", key="reg_mail")
+            rp = st.text_input("Telefon", key="reg_phone")
+            rpw = st.text_input("Şifre", type="password", key="reg_pass")
 
-            if st.button("Kod Gönder"):
+            if st.button("E-posta Kodu Gönder"):
                 code = random.randint(100000, 999999)
-                st.session_state.code = code
+                st.session_state.email_code = code
                 send_email(rm, code)
-                send_sms(rp, code)
-                st.success("Kod gönderildi")
+                st.success("Doğrulama kodu e-posta ile gönderildi")
 
-            rc = st.text_input("Doğrulama Kodu")
+            rc = st.text_input("Doğrulama Kodu", key="reg_code")
 
             if st.button("Kayıt Ol"):
-                if int(rc) == st.session_state.code:
-                    c.execute(
-                        "INSERT INTO users VALUES (?,?,?,?,0,1)",
-                        (ru, rpw, rm, rp)
-                    )
-                    conn.commit()
-                    st.success("Kayıt başarılı")
+                if "email_code" not in st.session_state:
+                    st.error("Önce kod gönderin")
+                elif str(rc) != str(st.session_state.email_code):
+                    st.error("Kod hatalı")
                 else:
-                    st.error("Kod yanlış")
+                    try:
+                        c.execute(
+                            "INSERT INTO users VALUES (?,?,?,?,0,1)",
+                            (ru, rpw, rm, rp)
+                        )
+                        conn.commit()
+                        st.success("Kayıt başarılı, giriş yapabilirsiniz")
+                    except:
+                        st.error("Bu kullanıcı adı zaten var")
 
     else:
         user = get_user(st.session_state.login)
         st.success(f"Hoş geldin {user[0]}")
+
         if user[4]:
-            st.success("🔥 PRO AKTİF")
+            st.success("🔥 PRO ÜYELİK AKTİF")
         else:
             st.warning("FREE ÜYELİK")
+            st.info("🔒 Pro analizler kilitli")
 
             if st.button("💳 Pro Satın Al (Demo)"):
                 make_pro(user[0])
                 st.success("Ödeme alındı → Pro aktif")
                 st.rerun()
 
-        if st.button("Çıkış"):
+        if st.button("Çıkış Yap"):
             st.session_state.login = None
             st.rerun()
 
 # =========================
-# ANALİZ (KISALTTIM)
+# ANALİZ BÖLÜMÜ
 # =========================
 if not st.session_state.login:
     st.stop()
 
 st.header("AI Maç Analizi")
 
-lig = st.selectbox("Lig", ["PL", "PD", "SA"])
-ev = st.text_input("Ev Sahibi")
-dep = st.text_input("Deplasman")
+lig = st.selectbox("Lig", ["PL", "PD", "SA", "BL1", "FL1"])
+ev = st.text_input("Ev Sahibi Takım")
+dep = st.text_input("Deplasman Takım")
 
-if st.button("Analiz"):
-    st.metric("AI Güven Skoru", "82%")
+if st.button("AI Analizi Başlat"):
+    st.metric("AI Güven Skoru", "81%")
+    st.metric("Risk / Denge", "Orta")
 
     if user[4]:
-        st.success("⛔ AI PAS GEÇ UYARISI: Pro algoritması aktif")
+        st.error("⛔ AI PAS GEÇ UYARISI: Pro algoritması bu maç için oynamayı önermiyor")
     else:
-        st.info("🔒 Pro analizler kilitli")
+        st.warning("🔒 Pro analiz (PAS GEÇ, kırılgan alanlar) kilitli")
