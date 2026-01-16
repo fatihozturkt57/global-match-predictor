@@ -5,22 +5,24 @@ import requests
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="Pro Analiz", layout="wide")
-st.title("⚽ Profesyonel Maç Analiz Sistemi")
+st.set_page_config(page_title="AI Match Predictor", layout="wide")
+st.title("🧠 Yapay Zeka Destekli Stratejik Analiz")
 
+# Lig Seçimi
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 
 @st.cache_data
-def veri_yukle(kod):
+def lig_verisi_cek(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
     try:
-        res = requests.get(url, headers=HEADERS).json()
-        return res['standings'][0]['table']
+        response = requests.get(url, headers=HEADERS)
+        data = response.json()
+        return data['standings'][0]['table']
     except:
         return None
 
-tablo = veri_yukle(ligler[sec_lig])
+tablo = lig_verisi_cek(ligler[sec_lig])
 
 if tablo:
     veriler = {row['team']['name']: row for row in tablo}
@@ -30,17 +32,12 @@ if tablo:
     with c1: ev_adi = st.selectbox("Ev Sahibi Takım", takimlar)
     with c2: dep_adi = st.selectbox("Deplasman Takımı", takimlar)
 
-    if st.button("📊 ANALİZİ BAŞLAT"):
-        e = veriler[ev_adi]
-        d = veriler[dep_adi]
+    if st.button("🧠 AI SİMÜLASYONUNU BAŞLAT"):
+        e, d = veriler[ev_adi], veriler[dep_adi]
         
-        # Verileri Hesaplama
+        # --- VERİ MADENCİLİĞİ ---
         e_m, d_m = e['playedGames'], d['playedGames']
-        
-        if e_m > 0 and d_m > 0:
-            e_at = e['goalsFor'] / e_m
-            e_ye = e['goalsAgainst'] / e_m
-            d_at = d['goalsFor'] / d_m
-            d_ye = d['goalsAgainst'] / d_m
-
-            # xG Hesaplama
+        e_hucum = e['goalsFor'] / e_m
+        e_defans = e['goalsAgainst'] / e_m
+        d_hucum = d['goalsFor'] / d_m
+        d_defans = d['goalsAgainst'] / d_m
