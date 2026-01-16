@@ -1,95 +1,81 @@
 import streamlit as st
 import requests
+import pandas as pd
 
 # API Ayarları
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="Veri Analiz Paneli", layout="wide")
-st.title("📊 Veri Odaklı Maç Analiz Motoru")
+st.set_page_config(page_title="Data-Driven Pro Analiz", layout="wide")
+st.title("⚽ Veri Madenciliği ve Karşılaştırmalı Analiz Sistemi")
 
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 
 @st.cache_data
-def lig_verisi_al(kod):
+def lig_verilerini_getir(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
     try:
         res = requests.get(url, headers=HEADERS).json()
-        return res['standings'][0]['table']
+        return res['standings'][0]['table'], res['competition']['name']
     except:
-        return None
+        return None, None
 
-tablo = lig_verisi_al(ligler[sec_lig])
+tablo, lig_adi = lig_verilerini_getir(ligler[sec_lig])
 
 if tablo:
     veriler = {row['team']['name']: row for row in tablo}
     takimlar = sorted(list(veriler.keys()))
+    
+    # Lig Geneli Ortalamalar (Güç Endeksi İçin)
+    toplam_gol = sum(row['goalsFor'] for row in tablo)
+    toplam_mac = sum(row['playedGames'] for row in tablo)
+    lig_ort_gol = toplam_gol / toplam_mac
 
-    c1, c2 = st.columns(2)
-    with c1: ev_adi = st.selectbox("Ev Sahibi", takimlar)
-    with c2: dep_adi = st.selectbox("Deplasman", takimlar)
+    col1, col2 = st.columns(2)
+    with col1: ev_adi = st.selectbox("Ev Sahibi", takimlar)
+    with col2: dep_adi = st.selectbox("Deplasman", takimlar)
 
-    if st.button("📊 VERİLERİ ÇARPIŞTIR"):
+    if st.button("📊 VERİ MADENCİLİĞİNİ BAŞLAT"):
         e, d = veriler[ev_adi], veriler[dep_adi]
         
-        # --- MATEMATİKSEL HESAPLAMA MOTORU ---
-        e_mac = e['playedGames']
-        d_mac = d['playedGames']
-        
-        # Maç Başı Ortalamalar
-        e_atilan = e['goalsFor'] / e_mac
-        e_yenilen = e['goalsAgainst'] / e_mac
-        d_atilan = d['goalsFor'] / d_mac
-        d_yenilen = d['goalsAgainst'] / d_mac
+        # --- GÜÇ ENDEKSİ HESAPLAMA (Power Ranking) ---
+        # Bir takımın gol atma/yeme gücünün lig ortalamasına oranı
+        e_hucum_endeks = (e['goalsFor'] / e['playedGames']) / lig_ort_gol
+        e_savunma_endeks = (e['goalsAgainst'] / e['playedGames']) / lig_ort_gol
+        d_hucum_endeks = (d['goalsFor'] / d['playedGames']) / lig_ort_gol
+        d_savunma_endeks = (d['goalsAgainst'] / d['playedGames']) / lig_ort_gol
 
-        # --- 1. SKOR ANALİZİ (Göreceli Hesaplama) ---
-        # Ev sahibinin skoru: Kendi gol atma gücü + Rakibin gol yeme zafiyeti
-        skor_ev_hesap = (e_atilan + d_yenilen) / 2 + 0.3 # +0.3 Ev sahibi avantajı
-        skor_dep_hesap = (d_atilan + e_yenilen) / 2
-        
-        final_ev = round(skor_ev_hesap)
-        final_dep = round(skor_dep_hesap)
+        # Beklenen Goller (xG) - Takımların güçlerinin çapraz çarpımı
+        # Ev sahibi avantajı için global standart olan %15 (1.15) çarpanı eklenmiştir
+        e_xg = e_hucum_endeks * d_savunma_endeks * lig_ort_gol * 1.15
+        d_xg = d_hucum_endeks * e_savunma_endeks * lig_ort_gol
 
-        # --- 2. AVANTAJ / DEZAVANTAJ (Gerçek Rakamlarla) ---
         st.divider()
-        col1, col2 = st.columns(2)
         
-        with col1:
-            st.subheader(f"🏠 {ev_adi} Analizi")
-            # Dinamik Avantaj/Dezavantaj Kontrolü
-            if e_atilan > 1.8: 
-                st.success(f"✅ **Hücum Avantajı:** Maç başı {round(e_atilan, 2)} gol atıyor.")
-            if e_yenilen > 1.3: 
-                st.error(f"❌ **Savunma Dezavantajı:** Maç başı {round(e_yenilen, 2)} gol yiyor.")
-            else:
-                st.success(f"✅ **Savunma Gücü:** Maç başı sadece {round(e_yenilen, 2)} gol yiyerek kalesini iyi savunuyor.")
+        # --- ANALİZ RAPORU ---
+        st.subheader(f"🔍 {ev_adi} - {dep_adi} Veri Karşılaştırması")
+        
+        res1, res2 = st.columns(2)
+        with res1:
+            st.info(f"🏠 {ev_adi} Analizi")
+            st.write(f"**Hücum Verimliliği:** %{round(e_hucum_endeks * 100)}")
+            st.write(f"**Savunma Direnci:** %{round((2 - e_savunma_endeks) * 100)}") # 1.0 altı iyidir
+            if e_hucum_endeks > 1.3: st.success("✅ Rakip defansın arkasına sarkma kapasitesi çok yüksek.")
+            if e_savunma_endeks > 1.2: st.error("❌ Kendi yarı sahasında ciddi boşluklar veriyor.")
 
-        with col2:
-            st.subheader(f"🚀 {dep_adi} Analizi")
-            if d_atilan > e_atilan:
-                st.success(f"✅ **Hücum Üstünlüğü:** Rakibinden daha yüksek gol ortalamasına ({round(d_atilan, 2)}) sahip.")
-            if d_yenilen > 1.5:
-                st.error(f"❌ **Defans Zafiyeti:** {round(d_yenilen, 2)} gol yeme ortalaması risk teşkil ediyor.")
-            if d['won'] > e['won']:
-                st.success(f"✅ **Galibiyet Oranı:** Lig genelinde rakibinden daha fazla maç kazandı.")
+        with res2:
+            st.info(f"🚀 {dep_adi} Analizi")
+            st.write(f"**Hücum Verimliliği:** %{round(d_hucum_endeks * 100)}")
+            st.write(f"**Savunma Direnci:** %{round((2 - d_savunma_endeks) * 100)}")
+            if d_hucum_endeks > e_hucum_endeks: st.warning("⚠️ Deplasman takımı gol yollarında ev sahibinden daha keskin.")
+            if d_savunma_endeks < 0.9: st.success("🛡️ Kapalı savunma kurgusuyla geçit vermeyebilir.")
 
-        # --- 3. İSTATİSTİKSEL TAHMİNLER ---
+        # --- DİNAMİK TAHMİN MERKEZİ ---
         st.divider()
-        st.subheader("📋 Maç Tahminleri (Veriye Dayalı)")
+        st.subheader("🎯 İstatistiksel Tahminler")
         
-        k1, k2, k3, k4 = st.columns(4)
+        m1, m2, m3, m4 = st.columns(4)
         
-        # İY Skoru: Genelde maçın ilk yarısında toplam golün %40'ı atılır.
-        iy_ev = 1 if skor_ev_hesap > 1.7 else 0
-        iy_dep = 1 if skor_dep_hesap > 1.9 else 0
-        
-        # Korner: Takımların toplam gol beklentisi (xG) ile doğru orantılıdır.
-        korner = round(7.5 + (e_atilan + d_atilan) * 1.2)
-        
-        # Kart: Maçtaki savunma zafiyetleri ve rekabet puanına göre.
-        kart = round(2.0 + (e_yenilen + d_yenilen) * 1.4)
-
-        k1.metric("Maç Sonu Tahmini", f"{final_ev} - {final_dep}")
-        k2.metric("İlk Yarı Skoru", f"{iy_ev} - {iy_dep}")
-        k3.metric("Tahmini Korner", f"{korner}+")
+        # Skor Tahmini (xG üzerinden daha hassas)
+        m1.metric("Beklenen Skor (MS)", f"{round(e_xg
