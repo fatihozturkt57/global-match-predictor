@@ -64,23 +64,28 @@ if st.button("AI ANALİZİ BAŞLAT"):
     guven = min(100, round(abs(ev_oran - dep_oran) * 1.5))
 
     if abs(ev_oran - dep_oran) < 10:
-        risk = "Yüksek Risk"
+        risk = "Yüksek Risk – Dengeli Maç"
     elif abs(ev_oran - dep_oran) < 25:
-        risk = "Orta Risk"
+        risk = "Orta Risk – Kontrollü"
     else:
-        risk = "Düşük Risk"
+        risk = "Düşük Risk – Net Taraf"
 
     # =========================
-    # SKOR TAHMİNİ
+    # MAÇ EĞİLİMİ (SKOR YOK)
     # =========================
-    ev_gol = round(ev_xg)
-    dep_gol = round(dep_xg)
-    skor_tahmini = f"{ev_gol}-{dep_gol}"
+    if abs(ev_oran - dep_oran) < 10 and toplam_xg >= 2.7:
+        mac_egilimi = "Dengeli ve gollü maç"
+    elif ev_oran > dep_oran and ev_xg < 1.8:
+        mac_egilimi = "Ev sahibi önde, düşük fark olası"
+    elif dep_oran > ev_oran and dep_xg < 1.8:
+        mac_egilimi = "Deplasman lehine sürpriz ihtimali"
+    else:
+        mac_egilimi = "Temkinli ve taktiksel maç"
 
     # =========================
     # KG VAR / ÜST-ALT
     # =========================
-    kg_var = "KG Var" if ev_gol > 0 and dep_gol > 0 else "KG Yok"
+    kg_var = "KG Var" if ev_xg > 0.9 and dep_xg > 0.9 else "KG Yok"
     ust_alt = "Üst 2.5" if toplam_xg >= 2.7 else "Alt 2.5"
 
     # =========================
@@ -127,13 +132,13 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("AI Güven", f"%{guven}")
         st.metric("Risk", risk)
 
-    st.subheader("📌 Temel Tahminler")
-    st.write(f"**Skor Tahmini:** {skor_tahmini}")
+    st.subheader("📌 Maç Eğilimi ve Gol Analizi")
+    st.write(f"**Maç Eğilimi:** {mac_egilimi}")
     st.write(f"**KG:** {kg_var}")
     st.write(f"**Üst / Alt:** {ust_alt}")
 
     if premium:
-        st.subheader("🔥 Pro Analiz (Premium)")
+        st.subheader("🔥 Pro Analiz")
         p1, p2 = st.columns(2)
         with p1:
             st.write(f"**{ev_adi} Form:** {ev_form}")
@@ -144,4 +149,4 @@ if st.button("AI ANALİZİ BAŞLAT"):
             st.write(f"Avantaj: {dep_av}")
             st.write(f"Dezavantaj: {dep_dez}")
     else:
-        st.info("🔒 Pro analiz için Premium Modu aç")
+        st.info("🔒 Detaylı analiz için Pro Modu aç")
