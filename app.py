@@ -5,8 +5,8 @@ import random
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = { 'X-Auth-Token': API_KEY }
 
-st.set_page_config(page_title="AI Bahis Doktoru", layout="wide")
-st.title("⚽ Profesyonel Maç Analizi & Skor Tahmini")
+st.set_page_config(page_title="Süper Analiz Paneli", layout="wide")
+st.title("🛡️ Profesyonel Futbol Analiz & Tahmin Merkezi")
 
 ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 secilen_lig = st.sidebar.selectbox("Ligi Seç", list(ligler.keys()))
@@ -21,66 +21,34 @@ try:
     veriler = {row['team']['name']: row for row in tablo}
     takimlar = sorted(list(veriler.keys()))
 
-    c1, c2 = st.columns(2)
-    with c1: ev = st.selectbox("Ev Sahibi", takimlar)
-    with c2: dep = st.selectbox("Deplasman", takimlar)
+    col_e, col_d = st.columns(2)
+    with col_e: ev = st.selectbox("Ev Sahibi Takım", takimlar)
+    with col_d: dep = st.selectbox("Deplasman Takım", takimlar)
 
-    if st.button("TAM ANALİZİ VE SKORLARI GÖSTER"):
+    if st.button("🔍 DEV ANALİZİ BAŞLAT"):
         e, d = veriler[ev], veriler[dep]
         
-        # --- HESAPLAMA MOTORU ---
-        e_gucu = (e['goalsFor'] / e['playedGames'])
-        d_gucu = (d['goalsFor'] / d['playedGames'])
-        e_defans = (e['goalsAgainst'] / e['playedGames'])
-        d_defans = (d['goalsAgainst'] / d['playedGames'])
-
-        # Skor Tahmini (Poisson Yaklaşımı)
-        ev_tahmin = round((e_gucu + d_defans) / 2)
-        dep_tahmin = round((d_gucu + e_defans) / 2)
+        # --- İSTATİSTİKSEL HESAPLAMALAR ---
+        e_gucu = e['goalsFor'] / e['playedGames']
+        d_gucu = d['goalsFor'] / d['playedGames']
+        e_defans = e['goalsAgainst'] / e['playedGames']
+        d_defans = d['goalsAgainst'] / d['playedGames']
         
-        # İlk Yarı (Genelde toplam golün %40'ı)
-        iy_ev = 1 if ev_tahmin > 1 else 0
-        iy_dep = 0
-
-        st.divider()
+        # Skor Tahmini
+        ev_skor = round((e_gucu + d_defans) / 2 + 0.3) # +0.3 ev sahibi avantajı
+        dep_skor = round((d_gucu + e_defans) / 2)
         
-        # 1. KAZANAN TAHMİNİ
-        st.subheader("🏆 Maç Sonu Tahmini")
-        if ev_tahmin > dep_tahmin:
-            st.success(f"MAÇ SONUCU: 1 ({ev} kazanır)")
-        elif dep_tahmin > ev_tahmin:
-            st.error(f"MAÇ SONUCU: 2 ({dep} kazanır)")
-        else:
-            st.warning("MAÇ SONUCU: 0 (Beraberlik)")
-
-        # 2. SKOR VE KARTLAR (TABLO HALİNDE)
         st.divider()
-        col_skor, col_istatistik = st.columns(2)
 
-        with col_skor:
-            st.markdown("### 🥅 Skor Tahminleri")
-            st.write(f"**İlk Yarı Skoru:** {iy_ev} - {iy_dep}")
-            st.write(f"**Maç Sonu Skoru:** {ev_tahmin} - {dep_tahmin}")
-            st.write(f"**Toplam Gol:** {ev_tahmin + dep_tahmin} (Alt/Üst Analizi)")
-
-        with col_istatistik:
-            st.markdown("### 📈 Korner & Kart Tahminleri")
-            # İstatistiklere dayalı rastgeleleştirilmiş tahmin (Lig ortalamaları baz alınır)
-            korner = random.randint(8, 12)
-            sari = random.randint(3, 6)
-            kirmizi = "10% İhtimal" if (e_defans + d_defans) > 2.5 else "Çok Düşük"
-            
-            st.write(f"**Toplam Korner:** {korner}+")
-            st.write(f"**Sarı Kart:** {sari}+")
-            st.write(f"**Kırmızı Kart:** {kirmizi}")
-
-        # 3. DETAYLI NEDENLER
-        st.divider()
-        st.markdown("### 🔍 Neden Bu Tahmini Verdik?")
-        if ev_tahmin > dep_tahmin:
-            st.write(f"- **{ev} Avantajı:** Hücum hattı maç başına {e_gucu:.1f} gol atıyor. Rakip {dep} ise deplasmanda savunmada zorlanıyor.")
-        else:
-            st.write(f"- **{dep} Avantajı:** {dep} takımı savunma disipliniyle ön plana çıkıyor ve kontrataklarda etkili.")
-            
-except Exception:
-    st.error("Veri çekilemedi. API limitine takılmış olabilirsiniz.")
+        # 1. BÖLÜM: TAHMİN ÖZETİ (KİM KAZANIR?)
+        st.subheader("🏆 Maç Sonu & Skor Tahmini")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if ev_skor > dep_skor: st.success(f"**MAÇ SONUCU: 1**\n\n({ev} Favori)")
+            elif dep_skor > ev_skor: st.error(f"**MAÇ SONUCU: 2**\n\n({dep} Favori)")
+            else: st.warning("**MAÇ SONUCU: 0**\n\n(Beraberlik)")
+        with c2:
+            st.metric("Tahmini Skor", f"{ev_skor} - {dep_skor}")
+            st.write(f"İY Skoru: {round(ev_skor/2)} - {round(dep_skor/2)}")
+        with c3:
+            st.write(f"🚩
