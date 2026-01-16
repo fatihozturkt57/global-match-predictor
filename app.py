@@ -1,30 +1,46 @@
-if st.button("🧠 AI ANALİZİNİ BAŞLAT"):
-        e, d = veriler[ev_adi], veriler[dep_adi]
-        
-        # Oynanan maç sayılarını güvenli alalım (0'a bölme hatası için)
-        e_mac = e.get('playedGames', 1)
-        d_mac = d.get('playedGames', 1)
-        
-        # 1. TEMEL İSTATİSTİKLER (Hücum ve Savunma Gücü)
-        e_at = e['goalsFor'] / e_mac
-        e_ye = e['goalsAgainst'] / e_mac
-        d_at = d['goalsFor'] / d_mac
-        d_ye = d['goalsAgainst'] / d_mac
+import streamlit as st
+import requests
 
-        # 2. SKOR TAHMİNİ (Gerçekçi Yuvarlama)
-        # Evin atacağı: (Kendi hücumu + Rakip defans zafiyeti) / 2
-        e_xg = (e_at + d_ye) / 2 + 0.2
-        d_xg = (d_at + e_ye) / 2
-        
-        final_ev = round(e_xg)
-        final_dep = round(d_xg)
+# API Ayarları
+API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
+HEADERS = {'X-Auth-Token': API_KEY}
 
-        # --- SONUÇLARI EKRANA BASAN KISIM ---
-        st.divider()
-        st.subheader(f"🏟️ {ev_adi} vs {dep_adi} Analiz Raporu")
+st.set_page_config(page_title="Pro Analiz", layout="wide")
+st.title("⚽ Profesyonel Maç Analiz Sistemi")
+
+ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
+sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
+
+@st.cache_data
+def veri_yukle(kod):
+    url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
+    try:
+        res = requests.get(url, headers=HEADERS).json()
+        return res['standings'][0]['table']
+    except:
+        return None
+
+tablo = veri_yukle(ligler[sec_lig])
+
+if tablo:
+    veriler = {row['team']['name']: row for row in tablo}
+    takimlar = sorted(list(veriler.keys()))
+
+    c1, c2 = st.columns(2)
+    with c1: ev_adi = st.selectbox("Ev Sahibi Takım", takimlar)
+    with c2: dep_adi = st.selectbox("Deplasman Takımı", takimlar)
+
+    if st.button("📊 ANALİZİ BAŞLAT"):
+        e = veriler[ev_adi]
+        d = veriler[dep_adi]
         
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Tahmini Skor", f"{final_ev} - {final_dep}")
-        m2.metric("İY Tahmini", f"{1 if e_xg > 1.8 else 0} - {1 if d_xg > 2.0 else 0}")
-        m3.metric("Tahmini Korner", f"{round(7.5 + (e_at + d_at) * 1.5)}+")
-        m4.metric("Tahmini
+        # Verileri Hesaplama
+        e_m, d_m = e['playedGames'], d['playedGames']
+        
+        if e_m > 0 and d_m > 0:
+            e_at = e['goalsFor'] / e_m
+            e_ye = e['goalsAgainst'] / e_m
+            d_at = d['goalsFor'] / d_m
+            d_ye = d['goalsAgainst'] / d_m
+
+            # xG Hesaplama
