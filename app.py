@@ -2,102 +2,71 @@ import streamlit as st
 import requests
 import random
 
-# API Ayarları
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = { 'X-Auth-Token': API_KEY }
 
-st.set_page_config(page_title="Süper Analiz Paneli", layout="wide")
-st.title("🛡️ Profesyonel Futbol Analiz & Tahmin Merkezi")
+st.set_page_config(page_title="Ultra Analiz Merkezi", layout="wide")
+st.title("⚽ Ultra-Detaylı Maç Analiz Sistemi")
 
-ligler = {
-    "İngiltere": "PL", 
-    "İspanya": "PD", 
-    "İtalya": "SA", 
-    "Almanya": "BL1", 
-    "Fransa": "FL1"
-}
-
+ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
 secilen_lig = st.sidebar.selectbox("Ligi Seç", list(ligler.keys()))
 
 @st.cache_data
 def veri_al(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
-    response = requests.get(url, headers=HEADERS)
-    return response.json()['standings'][0]['table']
+    return requests.get(url, headers=HEADERS).json()['standings'][0]['table']
 
 try:
     tablo = veri_al(ligler[secilen_lig])
     veriler = {row['team']['name']: row for row in tablo}
     takimlar = sorted(list(veriler.keys()))
 
-    col_e, col_d = st.columns(2)
-    with col_e: ev = st.selectbox("Ev Sahibi Takım", takimlar)
-    with col_d: dep = st.selectbox("Deplasman Takım", takimlar)
+    c1, c2 = st.columns(2)
+    with c1: ev = st.selectbox("Ev Sahibi", takimlar)
+    with c2: dep = st.selectbox("Deplasman", takimlar)
 
-    if st.button("🔍 DEV ANALİZİ BAŞLAT"):
+    if st.button("DERİNLEMESİNE ANALİZİ BAŞLAT"):
         e, d = veriler[ev], veriler[dep]
         
-        # --- İSTATİSTİKSEL HESAPLAMALAR ---
-        e_gucu = e['goalsFor'] / e['playedGames']
-        d_gucu = d['goalsFor'] / d['playedGames']
-        e_defans = e['goalsAgainst'] / e['playedGames']
-        d_defans = d['goalsAgainst'] / d['playedGames']
+        # --- GELİŞMİŞ VERİ ANALİZİ ---
+        e_puan_ort = e['points'] / e['playedGames']
+        d_puan_ort = d['points'] / d['playedGames']
+        e_form = e.get('form', 'N/A').replace(',', ' ')
+        d_form = d.get('form', 'N/A').replace(',', ' ')
         
-        # Skor Tahmini (Basit Poisson)
-        ev_skor = round((e_gucu + d_defans) / 2 + 0.3)
-        dep_skor = round((d_gucu + e_defans) / 2)
+        # Skor Tahmin Algoritması
+        ev_gol_beklentisi = (e['goalsFor'] / e['playedGames'] + d['goalsAgainst'] / d['playedGames']) / 2
+        dep_gol_beklentisi = (d['goalsFor'] / d['playedGames'] + e['goalsAgainst'] / e['playedGames']) / 2
         
-        st.divider()
-
-        # 1. BÖLÜM: TAHMİN ÖZETİ
-        st.subheader("🏆 Maç Sonu & Skor Tahmini")
-        c1, c2, c3 = st.columns(3)
-        
-        with c1:
-            if ev_skor > dep_skor:
-                st.success(f"**MAÇ SONUCU: 1**\n\n({ev} Favori)")
-            elif dep_skor > ev_skor:
-                st.error(f"**MAÇ SONUCU: 2**\n\n({dep} Favori)")
-            else:
-                st.warning("**MAÇ SONUCU: 0**\n\n(Beraberlik)")
-        
-        with c2:
-            st.metric("Tahmini Skor", f"{ev_skor} - {dep_skor}")
-            st.write(f"İlk Yarı: {round(ev_skor/2)} - {round(dep_skor/2)}")
-        
-        with c3:
-            # Hatalı olan satırları daha güvenli hale getirdik
-            st.write(f"🚩 Korner: {random.randint(8, 11)}+")
-            st.write(f"🟨 Sarı Kart: {random.randint(3, 5)}+")
-            st.write(f"🟥 Kırmızı Kart: %{random.randint(5, 15)}")
+        ev_skor = round(ev_gol_beklentisi + 0.4)
+        dep_skor = round(dep_gol_beklentisi)
 
         st.divider()
 
-        # 2. BÖLÜM: AVANTAJ VE DEZAVANTAJLAR
-        st.subheader("📝 Detaylı Nedenler (Avantaj/Dezavantaj)")
-        av1, av2 = st.columns(2)
+        # 🚩 TAHMİN ÖZETİ
+        st.subheader("🎯 Tahmin ve Beklenen Skor")
+        k1, k2, k3, k4 = st.columns(4)
+        with k1:
+            st.metric("Beklenen Skor", f"{ev_skor} - {dep_skor}")
+        with k2:
+            st.write(f"🚩 **Korner:** {random.randint(9, 13)}+")
+        with k3:
+            st.write(f"🟨 **Kart:** {random.randint(4, 7)}+")
+        with k4:
+            st.write(f"🌓 **İY Skoru:** {round(ev_skor/2)} - {round(dep_skor/2)}")
 
-        with av1:
-            st.info(f"🏠 {ev} Analizi")
-            if e['points'] > d['points']:
-                st.write("✅ **Avantaj:** Puan tablosunda daha üstte.")
-            if e_gucu > 1.7:
-                st.write(f"✅ **Avantaj:** Hücum hattı çok güçlü ({e_gucu:.1f} gol ort.)")
-            if e_defans > 1.3:
-                st.write("❌ **Dezavantaj:** Savunma arkasında çok boşluk veriyor.")
-            if e['playedGames'] > 10 and e['goalsFor'] < 15:
-                st.write("❌ **Dezavantaj:** Forvetlerde bitiricilik sorunu var.")
+        st.divider()
 
-        with av2:
-            st.info(f"🚀 {dep} Analizi")
-            if d_gucu > e_gucu:
-                st.write("✅ **Avantaj:** Hücum varyasyonları daha zengin.")
-            if d_defans < 1.0:
-                st.write("✅ **Avantaj:** Ligin en iyi savunma yapan takımlarından biri.")
-            if d['points'] < e['points']:
-                st.write("❌ **Dezavantaj:** Deplasman performansı istikrarsız.")
-            if d_defans > 1.5:
-                st.write("❌ **Dezavantaj:** Çok kolay gol yeme eğiliminde.")
+        # 📊 DETAYLI KARŞILAŞTIRMA
+        st.subheader("🔬 Taktiksel & Form Analizi")
+        col_a, col_b = st.columns(2)
 
-except Exception as err:
-    st.error("Bir veri hatası oluştu. Lütfen başka bir lig deneyin.")
+        with col_a:
+            st.info(f"🏠 {ev} - Teknik Rapor")
+            st.write(f"**Güncel Form:** {e_form}")
+            st.write(f"**Puan Ortalaması:** {e_puan_ort:.2f}")
+            
+            st.markdown("---")
+            if e_puan_ort > 2.0:
+                st.write("✅ **Şampiyonluk Modu:** Takım şampiyonluk baskısını kaldırabiliyor.")
+            if e['goalsFor'] > e['goalsAgainst']
