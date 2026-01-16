@@ -64,29 +64,36 @@ if st.button("AI ANALİZİ BAŞLAT"):
     guven = min(100, round(abs(ev_oran - dep_oran) * 1.5))
 
     if abs(ev_oran - dep_oran) < 10:
-        risk = "Yüksek Risk – Dengeli Maç"
+        risk = "Yüksek Risk – Dengeli"
     elif abs(ev_oran - dep_oran) < 25:
-        risk = "Orta Risk – Kontrollü"
+        risk = "Orta Risk"
     else:
         risk = "Düşük Risk – Net Taraf"
 
     # =========================
     # MAÇ EĞİLİMİ (SKOR YOK)
     # =========================
-    if abs(ev_oran - dep_oran) < 10 and toplam_xg >= 2.7:
-        mac_egilimi = "Dengeli ve gollü maç"
-    elif ev_oran > dep_oran and ev_xg < 1.8:
-        mac_egilimi = "Ev sahibi önde, düşük fark olası"
-    elif dep_oran > ev_oran and dep_xg < 1.8:
-        mac_egilimi = "Deplasman lehine sürpriz ihtimali"
+    if abs(ev_oran - dep_oran) < 10 and toplam_xg >= 2.8:
+        mac_egilimi = "Dengeli ve tempolu maç"
+    elif ev_oran > dep_oran:
+        mac_egilimi = "Ev sahibi üstün, kontrollü oyun"
     else:
-        mac_egilimi = "Temkinli ve taktiksel maç"
+        mac_egilimi = "Deplasman sürprizi mümkün"
 
     # =========================
-    # KG VAR / ÜST-ALT
+    # KG VAR / ÜST-ALT (DENGELİ)
     # =========================
-    kg_var = "KG Var" if ev_xg > 0.9 and dep_xg > 0.9 else "KG Yok"
-    ust_alt = "Üst 2.5" if toplam_xg >= 2.7 else "Alt 2.5"
+    if ev_xg > 1.1 and dep_xg > 1.1 and abs(ev_oran - dep_oran) < 25:
+        kg_var = "KG Var"
+    else:
+        kg_var = "KG Yok"
+
+    if toplam_xg >= 3.0 and abs(ev_oran - dep_oran) < 20:
+        ust_alt = "Üst 2.5"
+    elif toplam_xg < 2.4:
+        ust_alt = "Alt 2.5"
+    else:
+        ust_alt = "Kararsız (Riskli)"
 
     # =========================
     # FORM (SON 5 MAÇ – YAKLAŞIK)
@@ -132,7 +139,7 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("AI Güven", f"%{guven}")
         st.metric("Risk", risk)
 
-    st.subheader("📌 Maç Eğilimi ve Gol Analizi")
+    st.subheader("📌 Maç Eğilimi & Gol Analizi")
     st.write(f"**Maç Eğilimi:** {mac_egilimi}")
     st.write(f"**KG:** {kg_var}")
     st.write(f"**Üst / Alt:** {ust_alt}")
