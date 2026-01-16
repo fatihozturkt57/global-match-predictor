@@ -1,22 +1,19 @@
 import streamlit as st
 import requests
-import random
 
 # API Ayarları
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = {'X-Auth-Token': API_KEY}
 
-st.set_page_config(page_title="Pro Analiz Paneli", layout="wide")
+st.set_page_config(page_title="Pro Analiz Paneli v2", layout="wide")
 st.title("⚽ Profesyonel Maç Analiz & Tahmin Sistemi")
 
-# Lig Sözlüğü - Türkiye (TR) eklendi ancak API desteği gerekebilir
 ligler = {
     "İngiltere": "PL", 
     "İspanya": "PD", 
     "İtalya": "SA", 
     "Almanya": "BL1", 
-    "Fransa": "FL1",
-    "Türkiye (Beta)": "TR" 
+    "Fransa": "FL1"
 }
 sec_lig = st.sidebar.selectbox("Ligi Seçin", list(ligler.keys()))
 
@@ -35,46 +32,65 @@ try:
     with col1: ev = st.selectbox("Ev Sahibi Takım", takimlar)
     with col2: dep = st.selectbox("Deplasman Takımı", takimlar)
 
-    if st.button("🔍 ANALİZİ BAŞLAT"):
+    if st.button("🔍 GERÇEK VERİYLE ANALİZ ET"):
         e, d = veriler[ev], veriler[dep]
-        e_puan = round(e['points'] / e['playedGames'], 2)
-        d_puan = round(d['points'] / d['playedGames'], 2)
         
-        # Skor Tahmini
-        e_xg = (e['goalsFor'] / e['playedGames'] + d['goalsAgainst'] / d['playedGames']) / 2
-        d_xg = (d['goalsFor'] / d['playedGames'] + e['goalsAgainst'] / e['playedGames']) / 2
-        e_s, d_s = round(e_xg + 0.3), round(d_xg)
+        # --- VERİ ANALİZİ ---
+        e_mac = e['playedGames']
+        d_mac = d['playedGames']
+        
+        # 1. Gol Beklentisi (xG) Hesabı
+        e_hucum = e['goalsFor'] / e_mac
+        e_savunma = e['goalsAgainst'] / e_mac
+        d_hucum = d['goalsFor'] / d_mac
+        d_savunma = d['goalsAgainst'] / d_mac
+        
+        # Ev sahibi avantajı (+0.3) ve çapraz eşleşme
+        e_skor_tahmin = (e_hucum + d_savunma) / 2 + 0.3
+        d_skor_tahmin = (d_hucum + e_savunma) / 2
+        
+        # 2. Dinamik Korner Tahmini (Hücum gücü arttıkça korner artar)
+        # Toplam gol beklentisi üzerinden bir katsayı (Hücumcu takımlar = daha çok korner)
+        korner_baz = 7.5
+        korner_tahmin = korner_baz + (e_hucum + d_hucum) * 1.2
+        
+        # 3. Dinamik Kart Tahmini (Savunma zayıflığı ve rekabet)
+        # Savunması kötü takımlar daha çok faul yapar / Maç çekişmeliyse kart artar
+        kart_baz = 2.5
+        kart_tahmin = kart_baz + (e_savunma + d_savunma) * 0.8
+        
+        # 4. İY Skoru (Genelde maçın ilk yarısında toplam golün %40'ı atılır)
+        iy_e = round(e_skor_tahmin * 0.45)
+        iy_d = round(d_skor_tahmin * 0.40)
 
+        # --- GÖRSELLEŞTİRME ---
         st.divider()
-        st.subheader("🎯 Tahmin Özeti")
+        st.subheader("🎯 Takım Verilerine Dayalı Tahminler")
         k1, k2, k3, k4 = st.columns(4)
-        k1.metric("Beklenen Skor", f"{e_s}-{d_s}")
-        k2.write(f"🚩 Korner: {random.randint(8,12)}+")
-        k3.write(f"🟨 Kartlar: {random.randint(4,7)}+")
-        k4.write(f"🌓 İY Skoru: {round(e_s/2)}-{round(d_s/2)}")
+        
+        k1.metric("Beklenen Skor", f"{round(e_skor_tahmin)}-{round(d_skor_tahmin)}")
+        k2.metric("Tahmini Korner", f"{round(korner_tahmin, 1)}+")
+        k3.metric("Tahmini Kart", f"{round(kart_tahmin, 1)}+")
+        k4.metric("İlk Yarı Skoru", f"{iy_e}-{iy_d}")
 
         st.divider()
-        st.subheader("🔬 Taktiksel Nedenler (Avantaj & Dezavantaj)")
+        # Dinamik Analiz Notları
+        st.subheader("🔬 Taktiksel Veri Analizi")
         a1, a2 = st.columns(2)
 
         with a1:
             st.info(f"🏠 {ev}")
-            st.write(f"**Puan Ortalaması:** {e_puan}")
-            if e_puan > 2.0: st.write("✅ **GÜÇLÜ:** Takım şampiyonluk modunda, iç saha baskısı çok yüksek.")
-            if e['goalsFor'] > e['goalsAgainst'] * 1.5: st.write("🔥 **HÜCUM:** Forvetler çok verimli, her pozisyonu gole çevirebiliyorlar.")
-            if e['goalsAgainst'] > 25: st.write("⚠️ **RİSK:** Defans hattı ağır kalıyor, arkaya atılan toplarda zayıflar.")
+            st.write(f"**Maç Başı Gol:** {round(e_hucum, 2)}")
+            if e_hucum > 2.0: st.success("🔥 Olağanüstü hücum hattı.")
+            if e_savunma < 1.0: st.success("🛡️ Defans bloğu çok sağlam.")
+            else: st.warning("⚠️ Savunmada boşluklar veriyor.")
 
         with a2:
             st.info(f"🚀 {dep}")
-            st.write(f"**Puan Ortalaması:** {d_puan}")
-            if d_puan > e_puan: st.write("💪 **FORM:** Deplasman karnesi rakipten daha istikrarlı görünüyor.")
-            if d['goalsAgainst'] < d['playedGames']: st.write("🛡️ **DEFANS:** Çok katı bir savunma kurguları var, aşılması zor bir duvar gibiler.")
-            if d['lost'] > d['won']: st.write("📉 **RİSK:** Mağlubiyet sayısı yüksek, moral ve direnç seviyesi düşük.")
+            st.write(f"**Maç Başı Gol:** {round(d_hucum, 2)}")
+            if d_hucum > e_hucum: st.warning("⚡ Deplasman takımı gol yollarında daha üretken.")
+            if d['lost'] < 5: st.success("📈 Yenilmesi zor bir takım.")
+            else: st.error("📉 Kaybetme alışkanlığı oluşmuş.")
 
-        st.divider()
-        if e_s > d_s: st.success(f"🤖 SONUÇ: {ev} kazanmaya daha yakın görünüyor.")
-        elif d_s > e_s: st.error(f"🤖 SONUÇ: {dep} taktiksel disipliniyle sürpriz yapabilir.")
-        else: st.warning("🤖 SONUÇ: İki takımın dengede olduğu bir beraberlik maçı beklentisindeyiz.")
-
-except Exception:
-    st.error("Seçtiğiniz ligin verileri ücretsiz API kapsamında olmayabilir. Lütfen Avrupa liglerini deneyin.")
+except Exception as e:
+    st.error(f"Bir hata oluştu veya API limiti doldu. Lütfen tekrar deneyin. Hata: {e}")
