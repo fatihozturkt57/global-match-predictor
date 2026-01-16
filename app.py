@@ -1,65 +1,73 @@
 import streamlit as st
 import requests
 
-# Senin API anahtarın
 API_KEY = "59aad6ae23824eeb9f427e2ed418512e"
 HEADERS = { 'X-Auth-Token': API_KEY }
 
-# Sayfa Tasarımı
-st.set_page_config(page_title="Global Tahmin Paneli", page_icon="⚽", layout="centered")
+st.set_page_config(page_title="Pro Analiz Sistemi", layout="wide")
+st.title("🛡️ Stratejik Maç Analiz Raporu")
 
-st.title("⚽ AI Destekli Maç Analiz Sistemi")
-st.markdown("Dünya liglerinden canlı verilerle saniyelik tahmin üretir.")
+ligler = {"İngiltere": "PL", "İspanya": "PD", "İtalya": "SA", "Almanya": "BL1", "Fransa": "FL1"}
+secilen_lig = st.sidebar.selectbox("Ligi Seç", list(ligler.keys()))
 
-# Ligleri Tanımlayalım
-ligler = {
-    "İngiltere Premier Lig": "PL",
-    "İspanya La Liga": "PD",
-    "İtalya Serie A": "SA",
-    "Almanya Bundesliga": "BL1",
-    "Fransa Ligue 1": "FL1",
-    "Portekiz Premier Lig": "PPL",
-    "Hollanda Eredivisie": "DED"
-}
-
-secilen_lig = st.selectbox("Analiz edilecek ligi seçin:", list(ligler.keys()))
-
-@st.cache_data # Sayfa her yenilendiğinde veriyi tekrar çekmemesi için
-def veri_getir(kod):
+@st.cache_data
+def detayli_veri_al(kod):
     url = f"https://api.football-data.org/v4/competitions/{kod}/standings"
-    res = requests.get(url, headers=HEADERS).json()
-    # Puan durumunu bir sözlüğe çeviriyoruz
-    return {row['team']['name']: row for row in res['standings'][0]['table']}
+    return requests.get(url, headers=HEADERS).json()['standings'][0]['table']
 
 try:
-    takimlar_verisi = veri_getir(ligler[secilen_lig])
-    takim_listesi = sorted(list(takimlar_verisi.keys()))
+    tablo = detayli_veri_al(ligler[secilen_lig])
+    veriler = {row['team']['name']: row for row in tablo}
+    takimlar = sorted(list(veriler.keys()))
 
     col1, col2 = st.columns(2)
-    with col1:
-        ev = st.selectbox("Ev Sahibi Takım", takim_listesi)
-    with col2:
-        dep = st.selectbox("Deplasman Takımı", takim_listesi)
+    with col1: ev = st.selectbox("Ev Sahibi", takimlar)
+    with col2: dep = st.selectbox("Deplasman", takimlar)
 
-    if st.button("MAÇI ANALİZ ET"):
-        e_v = takimlar_verisi[ev]
-        d_v = takimlar_verisi[dep]
+    if st.button("DETAYLI ANALİZİ GÖSTER"):
+        e, d = veriler[ev], veriler[dep]
         
-        # Matematiksel Analiz (Puan ve Gol Dengesi)
-        ev_puan = (e_v['points'] / e_v['playedGames']) + (e_v['goalsFor'] / 40) + 0.3
-        dep_puan = (d_v['points'] / d_v['playedGames']) + (d_v['goalsFor'] / 40)
+        st.markdown(f"### 📋 {ev} vs {dep} Maç Raporu")
         
-        st.divider()
-        st.subheader("🤖 Yapay Zeka Tahmini")
+        col_ev, col_dep = st.columns(2)
         
-        if ev_puan > dep_puan + 0.35:
-            st.success(f"🏆 Favori: **{ev}** (Maç Sonucu: 1)")
-        elif dep_puan > ev_puan + 0.35:
-            st.error(f"🏆 Favori: **{dep}** (Maç Sonucu: 2)")
-        else:
-            st.warning("🤝 Denge: **Beraberlik İhtimali Yüksek** (Maç Sonucu: 0)")
+        with col_ev:
+            st.info(f"🏠 **{ev} Neden Kazanabilir? (Avantajlar)**")
+            if e['points'] > d['points']:
+                st.write("- **Puan Üstünlüğü:** Genel tabloda daha istikrarlı bir grafik çiziyorlar.")
+            if (e['goalsFor'] / e['playedGames']) > 1.8:
+                st.write("- **Hücum Hattı Formda:** Takım maç başına yüksek gol ortalamasıyla oynuyor; bitiricilikleri yüksek.")
+            st.write("- **Ev Sahibi Psikolojisi:** Seyirci desteği ve saha alışkanlığı bu seviyedeki maçlarda taktik disiplini artırır.")
+
+            st.error(f"⚠️ **{ev} Neden Kaybedebilir? (Dezavantajlar)**")
+            if e['goalsAgainst'] > 30:
+                st.write("- **Savunma Zafiyeti:** Takım arkada çok boşluk veriyor, kontra ataklarda zorlanabilirler.")
+            if e['playedGames'] > 20 and (e['goalsFor'] < 25):
+                st.write("- **Üretkenlik Sorunu:** Forvet hattı son haftalarda gol yollarında etkisiz kalıyor, bitiricilik zayıf.")
+
+        with col_dep:
+            st.success(f"🚀 **{dep} Neden Kazanabilir? (Avantajlar)**")
+            if d['points'] > e['points']:
+                st.write("- **Kadro Kalitesi:** Puan durumundaki yeri, daha dirençli bir kadroya sahip olduklarını gösteriyor.")
+            if (d['goalsAgainst'] / d['playedGames']) < 1.0:
+                st.write("- **Savunma Duvarı:** Kalelerini gole kapatma konusunda çok başarılılar, kolay pes etmezler.")
             
-        st.info(f"💡 İpucu: {ev} şu an {e_v['points']} puanda, {dep} ise {d_v['points']} puanda.")
+            st.error(f"⚠️ **{dep} Neden Kaybedebilir? (Dezavantajlar)**")
+            if (d['goalsFor'] / d['playedGames']) < 1.2:
+                st.write("- **Kısır Hücum:** Forvetlerin gol performansı düşük; taktiksel olarak gol bulmakta zorlanabilirler.")
+            st.write("- **Deplasman Baskısı:** Rakip sahanın baskısı altında taktiksel hatalar ve konsantrasyon kaybı yaşanabilir.")
+
+        # NİHAİ AI YORUMU
+        st.divider()
+        st.subheader("🤖 Yapay Zeka Sonuç Özeti")
+        fark = (e['points'] / e['playedGames']) - (d['points'] / d['playedGames'])
+        
+        if fark > 0.4:
+            st.write(f"Sistemimiz **{ev}** takımını favori görüyor. Temel neden: Rakibine göre çok daha dengeli bir hücum/savunma dengesine sahip olmaları.")
+        elif fark < -0.4:
+            st.write(f"Sistemimiz **{dep}** takımını favori görüyor. Temel neden: Deplasmanda olmalarına rağmen ligin en dirençli takımlarından biri olmaları.")
+        else:
+            st.write("Bu maç taktiksel bir satranç gibi geçecek. İki takımın da birbirine üstünlük kurması zor görünüyor; beraberlik kokusu var.")
 
 except Exception as e:
-    st.error("Ücretsiz API limitine takılmış olabiliriz veya bu lig şu an erişime kapalı. Lütfen başka bir lig deneyin.")
+    st.error("Veriler alınırken bir hata oluştu. API limitinizi kontrol edin.")
