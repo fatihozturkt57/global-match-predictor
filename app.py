@@ -9,7 +9,7 @@ st.title("💰 Kişisel Finans Yönetimi - Demo Pro Gelişmiş")
 # Kullanıcı Sistemi
 # ------------------------
 if "users" not in st.session_state:
-    st.session_state.users = {"fatih": "575757", "admin": "admin123"}  # hazır admin
+    st.session_state.users = {"fatih": "575757", "admin": "admin123"}
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -54,4 +54,70 @@ if not st.session_state.logged_in:
         register()
 else:
     st.success(f"Giriş yapıldı: {st.session_state.username}")
-    st.write("Demo verilerinizi buradan yönetebilirsiniz...")
+
+    # ------------------------
+    # Gelir / Gider Ekleme
+    # ------------------------
+    st.subheader("💸 Gelir / Gider Ekle")
+    with st.form("veri_form"):
+        tarih = st.date_input("Tarih", datetime.date.today())
+        kategori = st.selectbox("Kategori", ["Gelir", "Gıda", "Ulaşım", "Fatura", "Diğer"])
+        aciklama = st.text_input("Açıklama")
+        tutar = st.number_input("Tutar (₺)", min_value=0.0, step=0.01)
+        submitted = st.form_submit_button("Ekle")
+        if submitted:
+            st.session_state.data = pd.concat([st.session_state.data, 
+                                               pd.DataFrame([[tarih, kategori, aciklama, tutar]],
+                                                            columns=["Tarih", "Kategori", "Açıklama", "Tutar"])], ignore_index=True)
+            st.success("Veri eklendi!")
+
+    # ------------------------
+    # Veri Tablosu
+    # ------------------------
+    st.subheader("📊 Verileriniz")
+    st.dataframe(st.session_state.data)
+
+    # ------------------------
+    # Özet Kartlar
+    # ------------------------
+    if not st.session_state.data.empty:
+        total_income = st.session_state.data[st.session_state.data["Kategori"] == "Gelir"]["Tutar"].sum()
+        total_expense = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"]["Tutar"].sum()
+        balance = total_income - total_expense
+        max_cat = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"].groupby("Kategori")["Tutar"].sum().idxmax() \
+            if not st.session_state.data[st.session_state.data["Kategori"] != "Gelir"].empty else "Yok"
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Toplam Gelir", f"{total_income:.2f}₺")
+        c2.metric("Toplam Gider", f"{total_expense:.2f}₺")
+        c3.metric("Kalan Bütçe", f"{balance:.2f}₺")
+        c4.metric("En Yüksek Harcama", max_cat)
+
+    # ------------------------
+    # Kategori Bazlı Harcama Grafiği
+    # ------------------------
+    st.subheader("💹 Kategori Bazlı Harcama Dağılımı")
+    if not st.session_state.data.empty:
+        cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
+        st.bar_chart(cat_data)
+
+    # ------------------------
+    # Trend Grafiği
+    # ------------------------
+    st.subheader("📈 Zaman Bazlı Harcama / Gelir Trendleri")
+    if not st.session_state.data.empty:
+        trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
+        st.line_chart(trend_data)
+
+    # ------------------------
+    # Mini Akıllı Öneriler (Pro Demo)
+    # ------------------------
+    st.subheader("🧠 Mini Akıllı Öneriler (Pro Demo)")
+    if not st.session_state.data.empty:
+        fark = total_income - total_expense
+        if fark > 0:
+            st.success(f"💡 Gelirler giderlerden {fark:.2f}₺ fazla, mali durum pozitif.")
+        elif fark < 0:
+            st.warning(f"⚠️ Giderler gelirlerden {-fark:.2f}₺ fazla, dikkatli olun!")
+        else:
+            st.info("💡 Gelir ve giderleriniz dengede.")
