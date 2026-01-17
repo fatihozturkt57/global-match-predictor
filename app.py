@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
-# ADMIN KULLANICI OLUŞTURMA
+# ADMIN USER
 # =========================
 admin_username = "admin"
 admin_password = "1234"
@@ -53,18 +53,18 @@ st.title("AI Futbol Analiz Platformu")
 
 if "login" not in st.session_state:
     st.session_state.login = None
+    st.session_state.show_register = False
 
 # =========================
-# LOGIN / REGISTER SIDEBAR
+# LOGIN / REGISTER
 # =========================
 with st.sidebar:
     if not st.session_state.login:
-        tab1, tab2 = st.tabs(["Giriş", "Kayıt"])
+        option = st.radio("Seçim Yapın", ["Giriş", "Kayıt"], key="login_register_toggle")
 
-        # ---- LOGIN ----
-        with tab1:
-            u = st.text_input("Kullanıcı Adı", key="login_user_input")
-            p = st.text_input("Şifre", type="password", key="login_pass_input")
+        if option == "Giriş":
+            u = st.text_input("Kullanıcı Adı", key="login_user")
+            p = st.text_input("Şifre", type="password", key="login_pass")
             if st.button("Giriş Yap", key="login_btn"):
                 user = get_user(u)
                 if user:
@@ -78,12 +78,9 @@ with st.sidebar:
                         st.error("Şifre yanlış")
                 else:
                     st.error("Kullanıcı bulunamadı")
-
-        # ---- REGISTER ----
-        with tab2:
-            ru = st.text_input("Kullanıcı Adı", key="reg_user_input")
-            rpw = st.text_input("Şifre", type="password", key="reg_pass_input")
-
+        else:
+            ru = st.text_input("Kullanıcı Adı", key="reg_user")
+            rpw = st.text_input("Şifre", type="password", key="reg_pass")
             if st.button("Kayıt Ol", key="reg_btn"):
                 if get_user(ru):
                     st.error("Bu kullanıcı adı zaten var")
@@ -111,7 +108,7 @@ with st.sidebar:
             st.experimental_rerun()
 
 # =========================
-# AI ANALYSIS SECTION
+# AI ANALYSIS
 # =========================
 if not st.session_state.login:
     st.stop()
@@ -153,13 +150,11 @@ if st.button("AI ANALİZİ BAŞLAT", key="analiz_btn"):
     e_mac = max(e["playedGames"], 1)
     d_mac = max(d["playedGames"], 1)
 
-    # Hücum / Savunma katsayıları
     e_h = e["goalsFor"] / e_mac
     e_s = e["goalsAgainst"] / e_mac
     d_h = d["goalsFor"] / d_mac
     d_s = d["goalsAgainst"] / d_mac
 
-    # AI Simülasyonu (XG ve Olasılık Modeli)
     ev_xg = (e_h * d_s) ** 0.5 + 0.25
     dep_xg = (d_h * e_s) ** 0.5
 
@@ -178,10 +173,8 @@ if st.button("AI ANALİZİ BAŞLAT", key="analiz_btn"):
         st.metric("Deplasman XG", round(dep_xg, 2))
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
 
-    # =========================
-    # Ekstra AI göstergeler (PRO/Free mantığı)
-    # =========================
-    if user[2]:  # PRO
+    # PRO ANALİZLER
+    if user[2]:
         if abs(ev_oran - dep_oran) < 15:
             pas_gec = "⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil."
         else:
