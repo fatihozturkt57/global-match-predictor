@@ -3,7 +3,12 @@ import pandas as pd
 import datetime
 
 st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
-st.title("💰 Kişisel Finans Yönetimi - Demo Pro Gelişmiş")
+
+st.markdown(
+    """
+    <h1 style='text-align: center; color: #4CAF50;'>💰 Kişisel Finans Yönetimi - Demo Pro</h1>
+    """, unsafe_allow_html=True
+)
 
 # ------------------------
 # Kullanıcı Sistemi
@@ -121,3 +126,10 @@ else:
             st.warning(f"⚠️ Giderler gelirlerden {-fark:.2f}₺ fazla, dikkatli olun!")
         else:
             st.info("💡 Gelir ve giderleriniz dengede.")
+
+    # ------------------------
+    # Demo Pro Ödeme Butonu
+    # ------------------------
+    st.subheader("💎 Pro Demo Özellikleri")
+    if st.button("Pro Demo Aç"):
+        st.info("🎉 Pro demo özellikleri aktif! Gelir/Gider trendleri ve öneriler geliştirilmiş şekilde gösteriliyor.")
