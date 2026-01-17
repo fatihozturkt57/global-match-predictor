@@ -1,198 +1,105 @@
 import streamlit as st
-import requests
-import sqlite3
-import random
-from datetime import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
+import datetime
 
-# =========================
-# DATABASE
-# =========================
-conn = sqlite3.connect("users.db", check_same_thread=False)
-c = conn.cursor()
-c.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    username TEXT PRIMARY KEY,
-    password TEXT,
-    pro INTEGER DEFAULT 0,
-    last_login TEXT
-)
-""")
-conn.commit()
+st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
+st.title("💰 Kişisel Finans Yönetimi - Demo")
 
-# =========================
-# ADMIN USER
-# =========================
-admin_username = "admin"
-admin_password = "1234"
-c.execute("SELECT * FROM users WHERE username=?", (admin_username,))
-if not c.fetchone():
-    c.execute("INSERT INTO users (username, password, pro, last_login) VALUES (?, ?, ?, ?)",
-              (admin_username, admin_password, 1, datetime.now().isoformat()))
-    conn.commit()
+# ------------------------
+# Kullanıcı Sistemi
+# ------------------------
+if "users" not in st.session_state:
+    st.session_state.users = {"admin": "admin123"}  # demo admin
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-# =========================
-# USER FUNCTIONS
-# =========================
-def get_user(username):
-    c.execute("SELECT * FROM users WHERE username=?", (username,))
-    return c.fetchone()
-
-def make_pro(username):
-    c.execute("UPDATE users SET pro=1 WHERE username=?", (username,))
-    conn.commit()
-
-def update_login(username):
-    c.execute("UPDATE users SET last_login=? WHERE username=?", (datetime.now().isoformat(), username))
-    conn.commit()
-
-# =========================
-# STREAMLIT SETUP
-# =========================
-st.set_page_config(page_title="AI Pro Predictor", layout="wide")
-st.title("AI Futbol Analiz Platformu")
-
-if "login" not in st.session_state:
-    st.session_state.login = None
-    st.session_state.show_register = False
-
-# =========================
-# LOGIN / REGISTER
-# =========================
-with st.sidebar:
-    if not st.session_state.login:
-        option = st.radio("Seçim Yapın", ["Giriş", "Kayıt"], key="login_register_toggle")
-
-        if option == "Giriş":
-            u = st.text_input("Kullanıcı Adı", key="login_user")
-            p = st.text_input("Şifre", type="password", key="login_pass")
-            if st.button("Giriş Yap", key="login_btn"):
-                user = get_user(u)
-                if user:
-                    stored_password = str(user[1]).strip()
-                    if stored_password == str(p).strip():
-                        st.session_state.login = u
-                        update_login(u)
-                        st.success("Giriş başarılı!")
-                        st.experimental_rerun()
-                    else:
-                        st.error("Şifre yanlış")
-                else:
-                    st.error("Kullanıcı bulunamadı")
+def login():
+    st.subheader("Giriş Yap")
+    username = st.text_input("Kullanıcı Adı")
+    password = st.text_input("Şifre", type="password")
+    if st.button("Giriş"):
+        if username in st.session_state.users and st.session_state.users[username] == password:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.success(f"Hoşgeldiniz {username}")
         else:
-            ru = st.text_input("Kullanıcı Adı", key="reg_user")
-            rpw = st.text_input("Şifre", type="password", key="reg_pass")
-            if st.button("Kayıt Ol", key="reg_btn"):
-                if get_user(ru):
-                    st.error("Bu kullanıcı adı zaten var")
-                else:
-                    c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (ru, rpw))
-                    conn.commit()
-                    st.success("Kayıt başarılı, giriş yapabilirsiniz")
-    else:
-        user = get_user(st.session_state.login)
-        st.success(f"Hoş geldin {user[0]}")
+            st.error("Kullanıcı adı veya şifre yanlış.")
 
-        if user[2]:
-            st.success("🔥 PRO ÜYELİK AKTİF")
+def register():
+    st.subheader("Kayıt Ol")
+    new_user = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
+    new_pass = st.text_input("Yeni Şifre", type="password", key="reg_pass")
+    if st.button("Kayıt Ol"):
+        if new_user in st.session_state.users:
+            st.error("Bu kullanıcı adı zaten var.")
+        elif new_user.strip() == "" or new_pass.strip() == "":
+            st.error("Lütfen geçerli bilgiler girin.")
         else:
-            st.warning("FREE ÜYELİK")
-            st.info("🔒 Pro analizler kilitli")
+            st.session_state.users[new_user] = new_pass
+            st.success("Kayıt başarılı! Artık giriş yapabilirsiniz.")
 
-            if st.button("💳 Pro Satın Al (Demo)", key="pro_demo_btn"):
-                make_pro(user[0])
-                st.success("Pro aktif edildi (demo)")
-                st.experimental_rerun()
+if not st.session_state.logged_in:
+    col1, col2 = st.columns(2)
+    with col1:
+        login()
+    with col2:
+        register()
+else:
+    st.success(f"Giriş yapıldı: {st.session_state.username}")
 
-        if st.button("Çıkış Yap", key="logout_btn"):
-            st.session_state.login = None
-            st.experimental_rerun()
+    # ------------------------
+    # Kullanıcı Verileri
+    # ------------------------
+    if "data" not in st.session_state:
+        st.session_state.data = pd.DataFrame(columns=["Tarih", "Kategori", "Açıklama", "Tutar"])
 
-# =========================
-# AI ANALYSIS
-# =========================
-if not st.session_state.login:
-    st.stop()
+    st.subheader("Gelir / Gider Ekle")
+    with st.form("veri_form"):
+        tarih = st.date_input("Tarih", datetime.date.today())
+        kategori = st.selectbox("Kategori", ["Gelir", "Gıda", "Ulaşım", "Fatura", "Diğer"])
+        aciklama = st.text_input("Açıklama")
+        tutar = st.number_input("Tutar (₺)", min_value=0.0, step=0.01)
+        submitted = st.form_submit_button("Ekle")
+        if submitted:
+            st.session_state.data = pd.concat([st.session_state.data, 
+                                               pd.DataFrame([[tarih, kategori, aciklama, tutar]],
+                                                            columns=["Tarih", "Kategori", "Açıklama", "Tutar"])], ignore_index=True)
+            st.success("Veri eklendi!")
 
-st.header("AI Maç Analizi")
+    st.subheader("Geçmiş Veriler")
+    st.dataframe(st.session_state.data)
 
-# --- LIGLER ---
-ligler = {
-    "İngiltere": "PL",
-    "İspanya": "PD",
-    "İtalya": "SA",
-    "Almanya": "BL1",
-    "Fransa": "FL1"
-}
-
-sec_lig = st.selectbox("Lig Seçin", list(ligler.keys()), key="lig_select")
-
-@st.cache_data(show_spinner=False)
-def lig_verisi_al(code):
-    url = f"https://api.football-data.org/v4/competitions/{code}/standings"
-    r = requests.get(url, headers={"X-Auth-Token": "59aad6ae23824eeb9f427e2ed418512e"}, timeout=10)
-    r.raise_for_status()
-    return r.json()["standings"][0]["table"]
-
-tablo = lig_verisi_al(ligler[sec_lig])
-takimlar_db = {row["team"]["name"]: row for row in tablo}
-isimler = sorted(takimlar_db.keys())
-
-c1, c2 = st.columns(2)
-with c1:
-    ev_adi = st.selectbox("Ev Sahibi", isimler, key="ev_select")
-with c2:
-    dep_adi = st.selectbox("Deplasman", isimler, key="dep_select")
-
-if st.button("AI ANALİZİ BAŞLAT", key="analiz_btn"):
-    e = takimlar_db[ev_adi]
-    d = takimlar_db[dep_adi]
-
-    e_mac = max(e["playedGames"], 1)
-    d_mac = max(d["playedGames"], 1)
-
-    e_h = e["goalsFor"] / e_mac
-    e_s = e["goalsAgainst"] / e_mac
-    d_h = d["goalsFor"] / d_mac
-    d_s = d["goalsAgainst"] / d_mac
-
-    ev_xg = (e_h * d_s) ** 0.5 + 0.25
-    dep_xg = (d_h * e_s) ** 0.5
-
-    toplam_xg = ev_xg + dep_xg
-    ev_oran = round((ev_xg / toplam_xg) * 100)
-    dep_oran = 100 - ev_oran
-
+    # ------------------------
+    # Ücretsiz / Pro Demo
+    # ------------------------
     st.divider()
-    st.header(f"{ev_adi} - {dep_adi} AI Raporu")
+    st.subheader("Pro Demo Özellikler (Ödeme Yok, Demo Modu)")
 
-    m1, m2 = st.columns(2)
-    with m1:
-        st.metric("Ev Sahibi XG", round(ev_xg, 2))
-        st.metric("Ev Galibiyet %", f"%{ev_oran}")
-    with m2:
-        st.metric("Deplasman XG", round(dep_xg, 2))
-        st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
-
-    # PRO ANALİZLER
-    if user[2]:
-        if abs(ev_oran - dep_oran) < 15:
-            pas_gec = "⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil."
-        else:
-            pas_gec = "Maç oynanmaya uygun, risk dengesi normal."
-
-        ai_guven = random.randint(70, 90)
-        risk = "Düşük" if toplam_xg > 3 else "Orta" if toplam_xg > 1.5 else "Yüksek"
-        kr_alan = pas_gec
-        son5_ev = [random.randint(0,3) for _ in range(5)]
-        son5_dep = [random.randint(0,3) for _ in range(5)]
-        trend_ev = sum(son5_ev)/5
-        trend_dep = sum(son5_dep)/5
-
-        st.metric("AI Güven Skoru", f"{ai_guven}%")
-        st.metric("Risk / Denge Seviyesi", risk)
-        st.metric("Kırılgan Alan Analizi", kr_alan)
-        st.write(f"📈 Ev Takımı Son 5 Maç Ortalaması: {trend_ev:.2f}")
-        st.write(f"📈 Deplasman Takımı Son 5 Maç Ortalaması: {trend_dep:.2f}")
-
+    # Gelir-Gider Grafik
+    st.write("💹 Kategori Bazlı Harcama Dağılımı")
+    if not st.session_state.data.empty:
+        cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
+        fig, ax = plt.subplots()
+        ax.pie(cat_data, labels=cat_data.index, autopct="%1.1f%%")
+        st.pyplot(fig)
     else:
-        st.info("🔒 AI Güven Skoru ve Risk Analizi Pro üyelikle aktif olur")
+        st.info("Henüz veri yok. Gelir veya gider ekleyin.")
+
+    # Basit Trend Grafiği
+    st.write("📈 Zaman Bazlı Harcama / Gelir Trendleri")
+    if not st.session_state.data.empty:
+        trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
+        fig2, ax2 = plt.subplots()
+        ax2.plot(trend_data.index, trend_data.values, marker="o")
+        ax2.set_xlabel("Tarih")
+        ax2.set_ylabel("Toplam Tutar (₺)")
+        st.pyplot(fig2)
+    else:
+        st.info("Henüz veri yok. Gelir veya gider ekleyin.")
+
+    # PDF Rapor (Demo)
+    st.write("📄 PDF Rapor (Demo)")
+    st.download_button("Raporu İndir (Demo)", "Bu bir demo PDF raporudur.", file_name="rapor_demo.txt")
