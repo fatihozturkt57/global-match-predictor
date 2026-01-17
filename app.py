@@ -9,8 +9,7 @@ st.title("💰 Kişisel Finans Yönetimi - Demo")
 # Kullanıcı Sistemi
 # ------------------------
 if "users" not in st.session_state:
-    # Fatih için özel giriş + demo admin
-    st.session_state.users = {"fatih": "575757", "admin": "admin123"}
+    st.session_state.users = {"fatih": "575757", "admin": "admin123"}  # özel giriş
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -81,7 +80,7 @@ else:
     st.divider()
     st.subheader("Pro Demo Özellikler (Ödeme Yok, Demo Modu)")
 
-    # Gelir-Gider Grafik (Bar Chart)
+    # Kategori Bazlı Harcama
     st.write("💹 Kategori Bazlı Harcama Dağılımı")
     if not st.session_state.data.empty:
         cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
@@ -89,13 +88,36 @@ else:
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
-    # Basit Trend Grafiği (Line Chart)
+    # Trend Grafiği
     st.write("📈 Zaman Bazlı Harcama / Gelir Trendleri")
     if not st.session_state.data.empty:
         trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
         st.line_chart(trend_data)
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
+
+    # ------------------------
+    # Mini Akıllı Öneriler (Pro Demo)
+    # ------------------------
+    st.write("🧠 Mini Akıllı Öneriler (Pro Demo)")
+
+    if not st.session_state.data.empty:
+        toplam_gider = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"]["Tutar"].sum()
+        toplam_gelir = st.session_state.data[st.session_state.data["Kategori"] == "Gelir"]["Tutar"].sum()
+        fark = toplam_gelir - toplam_gider
+
+        if fark > 0:
+            st.success(f"💡 Gelirler giderlerden {fark:.2f}₺ fazla, mali durum pozitif.")
+        elif fark < 0:
+            st.warning(f"⚠️ Giderler gelirlerden {-fark:.2f}₺ fazla, dikkatli olun!")
+        else:
+            st.info("💡 Gelir ve giderleriniz dengede.")
+
+        # Son 7 gün trend kontrolü
+        son_veri = st.session_state.data.tail(7)
+        if not son_veri.empty:
+            son_toplam = son_veri["Tutar"].sum()
+            st.info(f"📊 Son 7 gün toplam hareket: {son_toplam:.2f}₺")
 
     # PDF Rapor (Demo)
     st.write("📄 PDF Rapor (Demo)")
