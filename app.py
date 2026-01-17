@@ -9,7 +9,8 @@ st.title("💰 Kişisel Finans Yönetimi - Demo")
 # Kullanıcı Sistemi
 # ------------------------
 if "users" not in st.session_state:
-    st.session_state.users = {"admin": "admin123"}  # demo admin
+    # Fatih için özel giriş + demo admin
+    st.session_state.users = {"fatih": "575757", "admin": "admin123"}
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -40,6 +41,9 @@ def register():
             st.session_state.users[new_user] = new_pass
             st.success("Kayıt başarılı! Artık giriş yapabilirsiniz.")
 
+# ------------------------
+# Giriş / Kayıt Kontrolü
+# ------------------------
 if not st.session_state.logged_in:
     col1, col2 = st.columns(2)
     with col1:
