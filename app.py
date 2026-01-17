@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import datetime
 
 st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
@@ -18,9 +17,9 @@ if "username" not in st.session_state:
 
 def login():
     st.subheader("Giriş Yap")
-    username = st.text_input("Kullanıcı Adı")
-    password = st.text_input("Şifre", type="password")
-    if st.button("Giriş"):
+    username = st.text_input("Kullanıcı Adı", key="login_user")
+    password = st.text_input("Şifre", type="password", key="login_pass")
+    if st.button("Giriş", key="login_btn"):
         if username in st.session_state.users and st.session_state.users[username] == password:
             st.session_state.logged_in = True
             st.session_state.username = username
@@ -32,7 +31,7 @@ def register():
     st.subheader("Kayıt Ol")
     new_user = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
     new_pass = st.text_input("Yeni Şifre", type="password", key="reg_pass")
-    if st.button("Kayıt Ol"):
+    if st.button("Kayıt Ol", key="reg_btn"):
         if new_user in st.session_state.users:
             st.error("Bu kullanıcı adı zaten var.")
         elif new_user.strip() == "" or new_pass.strip() == "":
@@ -78,25 +77,19 @@ else:
     st.divider()
     st.subheader("Pro Demo Özellikler (Ödeme Yok, Demo Modu)")
 
-    # Gelir-Gider Grafik
+    # Gelir-Gider Grafik (Bar Chart)
     st.write("💹 Kategori Bazlı Harcama Dağılımı")
     if not st.session_state.data.empty:
         cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
-        fig, ax = plt.subplots()
-        ax.pie(cat_data, labels=cat_data.index, autopct="%1.1f%%")
-        st.pyplot(fig)
+        st.bar_chart(cat_data)
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
-    # Basit Trend Grafiği
+    # Basit Trend Grafiği (Line Chart)
     st.write("📈 Zaman Bazlı Harcama / Gelir Trendleri")
     if not st.session_state.data.empty:
         trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
-        fig2, ax2 = plt.subplots()
-        ax2.plot(trend_data.index, trend_data.values, marker="o")
-        ax2.set_xlabel("Tarih")
-        ax2.set_ylabel("Toplam Tutar (₺)")
-        st.pyplot(fig2)
+        st.line_chart(trend_data)
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
