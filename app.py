@@ -18,6 +18,17 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 # =========================
+# ADMIN KULLANICI OLUŞTURMA
+# =========================
+admin_username = "admin"
+admin_password = "1234"  # İstediğin şifreyi buraya koyabilirsin
+c.execute("SELECT * FROM users WHERE username=?", (admin_username,))
+if not c.fetchone():
+    c.execute("INSERT INTO users (username, password, pro) VALUES (?, ?, ?)",
+              (admin_username, admin_password, 1))  # PRO aktif
+    conn.commit()
+
+# =========================
 # USER FUNCTIONS
 # =========================
 def get_user(username):
@@ -50,11 +61,16 @@ with st.sidebar:
             p = st.text_input("Şifre", type="password", key="login_pass")
             if st.button("Giriş Yap"):
                 user = get_user(u)
-                if user and user[1] == p:
-                    st.session_state.login = u
-                    st.rerun()
+                if user:
+                    stored_password = str(user[1]).strip()
+                    if stored_password == str(p).strip():
+                        st.session_state.login = u
+                        st.success("Giriş başarılı!")
+                        st.rerun()
+                    else:
+                        st.error("Şifre yanlış")
                 else:
-                    st.error("Giriş başarısız veya kullanıcı yok")
+                    st.error("Kullanıcı bulunamadı")
 
         # ---- REGISTER ----
         with tab2:
