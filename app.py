@@ -169,7 +169,12 @@ if st.button("AI ANALİZİ BAŞLAT"):
         st.metric("Deplasman XG", round(dep_xg, 2))
         st.metric("Deplasman Galibiyet %", f"%{dep_oran}")
 
-    # Ekstra AI göstergeler (demo)
-    st.metric("AI Güven Skoru", "81%")
-    st.metric("Risk / Denge Seviyesi", "Orta")
-    st.metric("Kırılgan Alan Analizi", "Pas Geç Algılanmadı")
+    # =========================
+    # Ekstra AI göstergeler (PRO/Free mantığı)
+    # =========================
+    if user[2]:  # PRO
+        st.metric("AI Güven Skoru", "81%")
+        st.metric("Risk / Denge Seviyesi", "Orta")
+        st.metric("Kırılgan Alan Analizi", "⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil.")
+    else:  # Free kullanıcı
+        st.info("🔒 AI Güven Skoru ve Risk Analizi Pro üyelikle aktif olur")
