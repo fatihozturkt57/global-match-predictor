@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import sqlite3
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # =========================
 # DATABASE
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password TEXT,
     pro INTEGER DEFAULT 0,
-    last_login TIMESTAMP
+    last_login TEXT
 )
 """)
 conn.commit()
@@ -27,7 +27,7 @@ admin_password = "1234"
 c.execute("SELECT * FROM users WHERE username=?", (admin_username,))
 if not c.fetchone():
     c.execute("INSERT INTO users (username, password, pro, last_login) VALUES (?, ?, ?, ?)",
-              (admin_username, admin_password, 1, datetime.now()))
+              (admin_username, admin_password, 1, datetime.now().isoformat()))
     conn.commit()
 
 # =========================
@@ -42,7 +42,7 @@ def make_pro(username):
     conn.commit()
 
 def update_login(username):
-    c.execute("UPDATE users SET last_login=? WHERE username=?", (datetime.now(), username))
+    c.execute("UPDATE users SET last_login=? WHERE username=?", (datetime.now().isoformat(), username))
     conn.commit()
 
 # =========================
@@ -63,9 +63,9 @@ with st.sidebar:
 
         # ---- LOGIN ----
         with tab1:
-            u = st.text_input("Kullanıcı Adı", key="login_user")
-            p = st.text_input("Şifre", type="password", key="login_pass")
-            if st.button("Giriş Yap"):
+            u = st.text_input("Kullanıcı Adı", key="login_user_input")
+            p = st.text_input("Şifre", type="password", key="login_pass_input")
+            if st.button("Giriş Yap", key="login_btn"):
                 user = get_user(u)
                 if user:
                     stored_password = str(user[1]).strip()
@@ -73,7 +73,7 @@ with st.sidebar:
                         st.session_state.login = u
                         update_login(u)
                         st.success("Giriş başarılı!")
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error("Şifre yanlış")
                 else:
@@ -81,10 +81,10 @@ with st.sidebar:
 
         # ---- REGISTER ----
         with tab2:
-            ru = st.text_input("Kullanıcı Adı", key="reg_user")
-            rpw = st.text_input("Şifre", type="password", key="reg_pass")
+            ru = st.text_input("Kullanıcı Adı", key="reg_user_input")
+            rpw = st.text_input("Şifre", type="password", key="reg_pass_input")
 
-            if st.button("Kayıt Ol"):
+            if st.button("Kayıt Ol", key="reg_btn"):
                 if get_user(ru):
                     st.error("Bu kullanıcı adı zaten var")
                 else:
@@ -101,14 +101,14 @@ with st.sidebar:
             st.warning("FREE ÜYELİK")
             st.info("🔒 Pro analizler kilitli")
 
-            if st.button("💳 Pro Satın Al (Demo)"):
+            if st.button("💳 Pro Satın Al (Demo)", key="pro_demo_btn"):
                 make_pro(user[0])
                 st.success("Pro aktif edildi (demo)")
-                st.rerun()
+                st.experimental_rerun()
 
-        if st.button("Çıkış Yap"):
+        if st.button("Çıkış Yap", key="logout_btn"):
             st.session_state.login = None
-            st.rerun()
+            st.experimental_rerun()
 
 # =========================
 # AI ANALYSIS SECTION
@@ -127,7 +127,7 @@ ligler = {
     "Fransa": "FL1"
 }
 
-sec_lig = st.selectbox("Lig Seçin", list(ligler.keys()))
+sec_lig = st.selectbox("Lig Seçin", list(ligler.keys()), key="lig_select")
 
 @st.cache_data(show_spinner=False)
 def lig_verisi_al(code):
@@ -142,11 +142,11 @@ isimler = sorted(takimlar_db.keys())
 
 c1, c2 = st.columns(2)
 with c1:
-    ev_adi = st.selectbox("Ev Sahibi", isimler)
+    ev_adi = st.selectbox("Ev Sahibi", isimler, key="ev_select")
 with c2:
-    dep_adi = st.selectbox("Deplasman", isimler)
+    dep_adi = st.selectbox("Deplasman", isimler, key="dep_select")
 
-if st.button("AI ANALİZİ BAŞLAT"):
+if st.button("AI ANALİZİ BAŞLAT", key="analiz_btn"):
     e = takimlar_db[ev_adi]
     d = takimlar_db[dep_adi]
 
@@ -182,22 +182,14 @@ if st.button("AI ANALİZİ BAŞLAT"):
     # Ekstra AI göstergeler (PRO/Free mantığı)
     # =========================
     if user[2]:  # PRO
-        # Dinamik Pas Geç Uyarısı
         if abs(ev_oran - dep_oran) < 15:
             pas_gec = "⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil."
         else:
             pas_gec = "Maç oynanmaya uygun, risk dengesi normal."
 
-        # AI Güven Skoru (rastgele dinamik)
         ai_guven = random.randint(70, 90)
-
-        # Risk / Denge Seviyesi dinamik
         risk = "Düşük" if toplam_xg > 3 else "Orta" if toplam_xg > 1.5 else "Yüksek"
-
-        # Kırılgan Alan Analizi
         kr_alan = pas_gec
-
-        # Son 5 maç trendi (sürpriz)
         son5_ev = [random.randint(0,3) for _ in range(5)]
         son5_dep = [random.randint(0,3) for _ in range(5)]
         trend_ev = sum(son5_ev)/5
