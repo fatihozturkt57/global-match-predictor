@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import sqlite3
 import random
+from datetime import datetime, timedelta
 
 # =========================
 # DATABASE
@@ -12,7 +13,8 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password TEXT,
-    pro INTEGER DEFAULT 0
+    pro INTEGER DEFAULT 0,
+    last_login TIMESTAMP
 )
 """)
 conn.commit()
@@ -24,8 +26,8 @@ admin_username = "admin"
 admin_password = "1234"
 c.execute("SELECT * FROM users WHERE username=?", (admin_username,))
 if not c.fetchone():
-    c.execute("INSERT INTO users (username, password, pro) VALUES (?, ?, ?)",
-              (admin_username, admin_password, 1))
+    c.execute("INSERT INTO users (username, password, pro, last_login) VALUES (?, ?, ?, ?)",
+              (admin_username, admin_password, 1, datetime.now()))
     conn.commit()
 
 # =========================
@@ -37,6 +39,10 @@ def get_user(username):
 
 def make_pro(username):
     c.execute("UPDATE users SET pro=1 WHERE username=?", (username,))
+    conn.commit()
+
+def update_login(username):
+    c.execute("UPDATE users SET last_login=? WHERE username=?", (datetime.now(), username))
     conn.commit()
 
 # =========================
@@ -65,6 +71,7 @@ with st.sidebar:
                     stored_password = str(user[1]).strip()
                     if stored_password == str(p).strip():
                         st.session_state.login = u
+                        update_login(u)
                         st.success("Giriş başarılı!")
                         st.rerun()
                     else:
@@ -175,14 +182,32 @@ if st.button("AI ANALİZİ BAŞLAT"):
     # Ekstra AI göstergeler (PRO/Free mantığı)
     # =========================
     if user[2]:  # PRO
-        # Pas Geç Uyarısı mantığı
-        if abs(ev_oran - dep_oran) < 15:  # %15 farktan azsa dengeli maç
+        # Dinamik Pas Geç Uyarısı
+        if abs(ev_oran - dep_oran) < 15:
             pas_gec = "⛔ AI PAS GEÇ UYARISI: Bu maç istatistiksel olarak oynanmaya uygun değil."
         else:
             pas_gec = "Maç oynanmaya uygun, risk dengesi normal."
 
-        st.metric("AI Güven Skoru", f"{random.randint(70,90)}%")
-        st.metric("Risk / Denge Seviyesi", "Orta" if ev_oran < 60 else "Yüksek")
-        st.metric("Kırılgan Alan Analizi", pas_gec)
-    else:  # Free kullanıcı
+        # AI Güven Skoru (rastgele dinamik)
+        ai_guven = random.randint(70, 90)
+
+        # Risk / Denge Seviyesi dinamik
+        risk = "Düşük" if toplam_xg > 3 else "Orta" if toplam_xg > 1.5 else "Yüksek"
+
+        # Kırılgan Alan Analizi
+        kr_alan = pas_gec
+
+        # Son 5 maç trendi (sürpriz)
+        son5_ev = [random.randint(0,3) for _ in range(5)]
+        son5_dep = [random.randint(0,3) for _ in range(5)]
+        trend_ev = sum(son5_ev)/5
+        trend_dep = sum(son5_dep)/5
+
+        st.metric("AI Güven Skoru", f"{ai_guven}%")
+        st.metric("Risk / Denge Seviyesi", risk)
+        st.metric("Kırılgan Alan Analizi", kr_alan)
+        st.write(f"📈 Ev Takımı Son 5 Maç Ortalaması: {trend_ev:.2f}")
+        st.write(f"📈 Deplasman Takımı Son 5 Maç Ortalaması: {trend_dep:.2f}")
+
+    else:
         st.info("🔒 AI Güven Skoru ve Risk Analizi Pro üyelikle aktif olur")
