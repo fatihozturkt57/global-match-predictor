@@ -3,13 +3,13 @@ import pandas as pd
 import datetime
 
 st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
-st.title("💰 Kişisel Finans Yönetimi - Demo")
+st.title("💰 Kişisel Finans Yönetimi - Demo Pro")
 
 # ------------------------
 # Kullanıcı Sistemi
 # ------------------------
 if "users" not in st.session_state:
-    st.session_state.users = {"fatih": "575757", "admin": "admin123"}  # özel giriş
+    st.session_state.users = {"fatih": "575757", "admin": "admin123"}
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -71,16 +71,32 @@ else:
                                                             columns=["Tarih", "Kategori", "Açıklama", "Tutar"])], ignore_index=True)
             st.success("Veri eklendi!")
 
+    # ------------------------
+    # Free / Pro Demo Dashboard
+    # ------------------------
     st.subheader("Geçmiş Veriler")
     st.dataframe(st.session_state.data)
 
-    # ------------------------
-    # Ücretsiz / Pro Demo
-    # ------------------------
     st.divider()
     st.subheader("Pro Demo Özellikler (Ödeme Yok, Demo Modu)")
 
-    # Kategori Bazlı Harcama
+    # Hızlı Özet Kartları
+    if not st.session_state.data.empty:
+        total_income = st.session_state.data[st.session_state.data["Kategori"] == "Gelir"]["Tutar"].sum()
+        total_expense = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"]["Tutar"].sum()
+        balance = total_income - total_expense
+        max_cat = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"].groupby("Kategori")["Tutar"].sum().idxmax() \
+            if not st.session_state.data[st.session_state.data["Kategori"] != "Gelir"].empty else "Yok"
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Toplam Gelir", f"{total_income:.2f}₺")
+        c2.metric("Toplam Gider", f"{total_expense:.2f}₺")
+        c3.metric("Kalan Bütçe", f"{balance:.2f}₺")
+        c4.metric("En Yüksek Harcama", max_cat)
+    else:
+        st.info("Henüz veri yok. Gelir veya gider ekleyin.")
+
+    # Kategori Bazlı Harcama (Renkli)
     st.write("💹 Kategori Bazlı Harcama Dağılımı")
     if not st.session_state.data.empty:
         cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
@@ -96,16 +112,10 @@ else:
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
-    # ------------------------
     # Mini Akıllı Öneriler (Pro Demo)
-    # ------------------------
     st.write("🧠 Mini Akıllı Öneriler (Pro Demo)")
-
     if not st.session_state.data.empty:
-        toplam_gider = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"]["Tutar"].sum()
-        toplam_gelir = st.session_state.data[st.session_state.data["Kategori"] == "Gelir"]["Tutar"].sum()
-        fark = toplam_gelir - toplam_gider
-
+        fark = total_income - total_expense
         if fark > 0:
             st.success(f"💡 Gelirler giderlerden {fark:.2f}₺ fazla, mali durum pozitif.")
         elif fark < 0:
@@ -113,12 +123,24 @@ else:
         else:
             st.info("💡 Gelir ve giderleriniz dengede.")
 
-        # Son 7 gün trend kontrolü
+        # Son 7 gün trend
         son_veri = st.session_state.data.tail(7)
         if not son_veri.empty:
             son_toplam = son_veri["Tutar"].sum()
             st.info(f"📊 Son 7 gün toplam hareket: {son_toplam:.2f}₺")
 
+        # Kategoriye göre mini uyarılar
+        harcama_kat = st.session_state.data[st.session_state.data["Kategori"] != "Gelir"].groupby("Kategori")["Tutar"].sum()
+        for k, v in harcama_kat.items():
+            if v > 500:  # demo threshold
+                st.warning(f"⚠️ {k} harcamaları yüksek: {v:.2f}₺")
+            else:
+                st.info(f"✅ {k} harcamaları normal: {v:.2f}₺")
+
     # PDF Rapor (Demo)
     st.write("📄 PDF Rapor (Demo)")
     st.download_button("Raporu İndir (Demo)", "Bu bir demo PDF raporudur.", file_name="rapor_demo.txt")
+
+    # Demo Pas Geç Uyarısı
+    if st.session_state.data.empty:
+        st.error("⛔ Demo için yeterli veri yok. Lütfen birkaç gelir/gider girin.")
