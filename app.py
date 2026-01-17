@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
-st.title("💰 Kişisel Finans Yönetimi - Demo Pro")
+st.title("💰 Kişisel Finans Yönetimi - Demo Pro Gelişmiş")
 
 # ------------------------
 # Kullanıcı Sistemi
@@ -96,15 +97,22 @@ else:
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
-    # Kategori Bazlı Harcama (Renkli)
-    st.write("💹 Kategori Bazlı Harcama Dağılımı")
+    # ------------------------
+    # Kategori Bazlı Harcama Grafikleri
+    # ------------------------
+    st.write("💹 Kategori Bazlı Harcama Dağılımı (Pro Demo)")
     if not st.session_state.data.empty:
         cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
-        st.bar_chart(cat_data)
+        fig, ax = plt.subplots()
+        ax.pie(cat_data, labels=cat_data.index, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig)
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
+    # ------------------------
     # Trend Grafiği
+    # ------------------------
     st.write("📈 Zaman Bazlı Harcama / Gelir Trendleri")
     if not st.session_state.data.empty:
         trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
@@ -112,7 +120,9 @@ else:
     else:
         st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
+    # ------------------------
     # Mini Akıllı Öneriler (Pro Demo)
+    # ------------------------
     st.write("🧠 Mini Akıllı Öneriler (Pro Demo)")
     if not st.session_state.data.empty:
         fark = total_income - total_expense
