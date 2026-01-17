@@ -6,7 +6,7 @@ st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
 
 st.markdown(
     """
-    <h1 style='text-align: center; color: #4CAF50;'>💰 Kişisel Finans Yönetimi - Demo Pro</h1>
+    <h1 style='text-align: center; color: #4CAF50;'>💰 Kişisel Finans Yönetimi - Pro Demo</h1>
     """, unsafe_allow_html=True
 )
 
@@ -21,6 +21,8 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["Tarih", "Kategori", "Açıklama", "Tutar"])
+if "pro_active" not in st.session_state:
+    st.session_state.pro_active = False
 
 def login():
     st.subheader("Giriş Yap")
@@ -115,21 +117,42 @@ else:
         st.line_chart(trend_data)
 
     # ------------------------
-    # Mini Akıllı Öneriler (Pro Demo)
-    # ------------------------
-    st.subheader("🧠 Mini Akıllı Öneriler (Pro Demo)")
-    if not st.session_state.data.empty:
-        fark = total_income - total_expense
-        if fark > 0:
-            st.success(f"💡 Gelirler giderlerden {fark:.2f}₺ fazla, mali durum pozitif.")
-        elif fark < 0:
-            st.warning(f"⚠️ Giderler gelirlerden {-fark:.2f}₺ fazla, dikkatli olun!")
-        else:
-            st.info("💡 Gelir ve giderleriniz dengede.")
-
-    # ------------------------
-    # Demo Pro Ödeme Butonu
+    # Pro Demo Butonu
     # ------------------------
     st.subheader("💎 Pro Demo Özellikleri")
     if st.button("Pro Demo Aç"):
-        st.info("🎉 Pro demo özellikleri aktif! Gelir/Gider trendleri ve öneriler geliştirilmiş şekilde gösteriliyor.")
+        st.session_state.pro_active = True
+        st.success("🎉 Pro demo özellikleri aktif!")
+
+    # ------------------------
+    # Pro Analizler
+    # ------------------------
+    if st.session_state.pro_active and not st.session_state.data.empty:
+        st.subheader("🧠 Pro Analiz & Öneriler")
+        last_7_days = st.session_state.data[st.session_state.data["Tarih"] >= (datetime.date.today() - datetime.timedelta(days=7))]
+        last_30_days = st.session_state.data[st.session_state.data["Tarih"] >= (datetime.date.today() - datetime.timedelta(days=30))]
+
+        income_7 = last_7_days[last_7_days["Kategori"]=="Gelir"]["Tutar"].sum()
+        expense_7 = last_7_days[last_7_days["Kategori"]!="Gelir"]["Tutar"].sum()
+        income_30 = last_30_days[last_30_days["Kategori"]=="Gelir"]["Tutar"].sum()
+        expense_30 = last_30_days[last_30_days["Kategori"]!="Gelir"]["Tutar"].sum()
+
+        # Mini Finansal Sağlık Skoru
+        score = max(0, min(100, int((income_30 - expense_30)/(income_30+1)*100)))
+        st.metric("Finansal Sağlık Skoru (0-100)", score)
+
+        # Akıllı Öneriler
+        if expense_7 > income_7:
+            st.warning("⚠ Son 7 gün giderleriniz gelirlerinizden fazla!")
+        else:
+            st.success("✅ Son 7 gün dengeli mali durum.")
+
+        if expense_30 > income_30:
+            st.warning("⚠ Son 30 gün giderleriniz gelirlerinizden fazla!")
+        else:
+            st.success("✅ Son 30 gün dengeli mali durum.")
+
+        # Kategori bazlı en yüksek harcama uyarısı
+        if not last_30_days[last_30_days["Kategori"]!="Gelir"].empty:
+            high_cat = last_30_days[last_30_days["Kategori"]!="Gelir"].groupby("Kategori")["Tutar"].sum().idxmax()
+            st.info(f"💡 Son 30 günün en yüksek harcama kategorisi: {high_cat}")
