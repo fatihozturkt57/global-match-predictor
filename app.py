@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Demo Finans Platformu", layout="wide")
 st.title("💰 Kişisel Finans Yönetimi - Demo Pro Gelişmiş")
@@ -103,12 +102,7 @@ else:
     st.write("💹 Kategori Bazlı Harcama Dağılımı (Pro Demo)")
     if not st.session_state.data.empty:
         cat_data = st.session_state.data.groupby("Kategori")["Tutar"].sum()
-        fig, ax = plt.subplots()
-        ax.pie(cat_data, labels=cat_data.index, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')
-        st.pyplot(fig)
-    else:
-        st.info("Henüz veri yok. Gelir veya gider ekleyin.")
+        st.bar_chart(cat_data)
 
     # ------------------------
     # Trend Grafiği
@@ -117,8 +111,6 @@ else:
     if not st.session_state.data.empty:
         trend_data = st.session_state.data.groupby("Tarih")["Tutar"].sum()
         st.line_chart(trend_data)
-    else:
-        st.info("Henüz veri yok. Gelir veya gider ekleyin.")
 
     # ------------------------
     # Mini Akıllı Öneriler (Pro Demo)
