@@ -137,6 +137,11 @@ else:
             else:
                 st.info(f"✅ {k} harcamaları normal: {v:.2f}₺")
 
+        # Mini ek özellik: Son 3 gün harcama trendi
+        son3 = st.session_state.data.tail(3)
+        if not son3.empty:
+            st.info(f"📈 Son 3 gün harcama trendi toplam: {son3['Tutar'].sum():.2f}₺")
+
     # PDF Rapor (Demo)
     st.write("📄 PDF Rapor (Demo)")
     st.download_button("Raporu İndir (Demo)", "Bu bir demo PDF raporudur.", file_name="rapor_demo.txt")
