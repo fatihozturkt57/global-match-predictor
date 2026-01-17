@@ -18,9 +18,9 @@ if "username" not in st.session_state:
 
 def login():
     st.subheader("Giriş Yap")
-    username = st.text_input("Kullanıcı Adı", key="login_user")
-    password = st.text_input("Şifre", type="password", key="login_pass")
-    if st.button("Giriş", key="login_btn"):
+    username = st.text_input("Kullanıcı Adı", key="login_user_unique")
+    password = st.text_input("Şifre", type="password", key="login_pass_unique")
+    if st.button("Giriş", key="login_btn_unique"):
         if username in st.session_state.users and st.session_state.users[username] == password:
             st.session_state.logged_in = True
             st.session_state.username = username
@@ -30,9 +30,9 @@ def login():
 
 def register():
     st.subheader("Kayıt Ol")
-    new_user = st.text_input("Yeni Kullanıcı Adı", key="reg_user")
-    new_pass = st.text_input("Yeni Şifre", type="password", key="reg_pass")
-    if st.button("Kayıt Ol", key="reg_btn"):
+    new_user = st.text_input("Yeni Kullanıcı Adı", key="reg_user_unique")
+    new_pass = st.text_input("Yeni Şifre", type="password", key="reg_pass_unique")
+    if st.button("Kayıt Ol", key="reg_btn_unique"):
         if new_user in st.session_state.users:
             st.error("Bu kullanıcı adı zaten var.")
         elif new_user.strip() == "" or new_pass.strip() == "":
